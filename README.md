@@ -23,8 +23,9 @@ Pick the printer, the card finds all its entities by itself.
 - **Status** with color: ready, sleeping, printing, scanning, copying, cancelling, stopped. The printer's control panel lights up in the status color and pulses while it works
 - **Ink levels**: one tank per cartridge, in the printer's slot order, with a warning below a configurable threshold
 - **Alerts**: low or nearly empty ink, missing / used / non-HP / damaged cartridge, printhead problem, and, through the IPP integration, empty paper tray, paper jam, open cover…
+- **ePrint status**: on, off or not registered (HP cloud printing)
 - Page counter
-- Automatic entity discovery from the device (works with English or French entity IDs), status, IPP sensor and page counter can be overridden
+- Automatic entity discovery from the device (works with English or French entity IDs), status, IPP sensor, ePrint sensors and page counter can be overridden
 - Visual editor in the dashboard UI (no YAML needed)
 - English and French, follows the Home Assistant language
 - Light and dark theme compatible
@@ -86,6 +87,7 @@ show_image: true
 show_inks: true
 show_alerts: true
 show_stats: true
+show_eprint: true
 show_expired: false
 low_threshold: 15
 image: /local/my-printer.png
@@ -94,6 +96,8 @@ entities:
   status: sensor.hp_officejet_pro_9010_series_192_168_1_119_status
   ipp: sensor.hp_officejet_pro_9010_series
   total_pages: sensor.hp_officejet_pro_9010_series_192_168_1_119_printer_total_pages
+  eprint: binary_sensor.hp_officejet_pro_9010_series_192_168_1_119_eprint_status
+  eprint_registration: binary_sensor.hp_officejet_pro_9010_series_192_168_1_119_eprint_registered
 ```
 
 ### Options reference
@@ -107,6 +111,7 @@ entities:
 | `show_inks` | ❌ | `true` | Show the ink levels |
 | `show_alerts` | ❌ | `true` | Show the alerts |
 | `show_stats` | ❌ | `true` | Show the total page counter |
+| `show_eprint` | ❌ | `true` | Show the ePrint status (HP Printer integration only) |
 | `show_expired` | ❌ | `false` | Also alert when a cartridge's warranty date has passed |
 | `low_threshold` | ❌ | `15` | Ink level (%) at or below which a cartridge is flagged as low; at 5 % or less it is nearly empty |
 | `image` | ❌ | Bundled picture | URL of your own printer picture, e.g. `/local/printer.png` |
@@ -122,6 +127,8 @@ Keys accepted under `entities`:
 | `status` | `sensor` | Printer status (HP Printer *Status* sensor, or the IPP printer sensor) |
 | `ipp` | `sensor` | IPP printer sensor, read for paper, jam and cover alerts |
 | `total_pages` | `sensor` | Page counter |
+| `eprint` | `binary_sensor` | ePrint status (on / off) |
+| `eprint_registration` | `binary_sensor` | ePrint registration, shows *not registered* when off |
 
 Cartridges are always found from the printer's devices.
 

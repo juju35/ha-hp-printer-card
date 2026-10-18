@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+### What's new
+- ePrint status chip under the printer status: on, off, or not registered, read from the HP Printer integration's *ePrint status* and *ePrint registered* sensors.
+- New `show_eprint` option (on by default), also in the visual editor.
+- `eprint` and `eprint_registration` entity overrides.
+
 ## 1.0.0
 
 First public release.

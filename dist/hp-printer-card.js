@@ -1,4 +1,4 @@
-var HP_PRINTER_CARD_VERSION = '1.0.0';
+var HP_PRINTER_CARD_VERSION = '1.1.0';
 
 // ── i18n ──────────────────────────────────────────────────────────────────────
 var HpI18n = {
@@ -71,6 +71,12 @@ var HpI18n = {
     en_status: 'Statut',
     en_ipp: 'Capteur IPP (alertes papier, capot…)',
     en_total_pages: 'Total de pages',
+    en_eprint: 'Statut ePrint',
+    en_eprint_registration: 'Enregistrement ePrint',
+    ed_show_eprint: 'Statut ePrint',
+    ep_on: 'ePrint activé',
+    ep_off: 'ePrint désactivé',
+    ep_unregistered: 'ePrint non enregistré',
   },
   en: {
     printer: 'Printer',
@@ -140,6 +146,12 @@ var HpI18n = {
     en_status: 'Status',
     en_ipp: 'IPP sensor (paper, cover… alerts)',
     en_total_pages: 'Total pages',
+    en_eprint: 'ePrint status',
+    en_eprint_registration: 'ePrint registration',
+    ed_show_eprint: 'ePrint status',
+    ep_on: 'ePrint on',
+    ep_off: 'ePrint off',
+    ep_unregistered: 'ePrint not registered',
   },
 };
 
@@ -366,7 +378,7 @@ function hpFindIppSensor(hass, mainId) {
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 var HP_DEFAULTS = {
-  show_image: true, show_inks: true, show_alerts: true, show_stats: true, show_expired: false, low_threshold: 15,
+  show_image: true, show_inks: true, show_alerts: true, show_stats: true, show_eprint: true, show_expired: false, low_threshold: 15,
 };
 
 class HpPrinterCard extends HTMLElement {
@@ -413,11 +425,23 @@ class HpPrinterCard extends HTMLElement {
 
     var main = hpEntitiesOf(hass, [deviceId]);
     var status = over.status || hpPick(main, hass, function (eid, s) { return eid.indexOf('sensor.') === 0 && hpIsHpStatus(s); });
-    var r = { deviceId: deviceId, kind: 'hp', status: status, inks: [], ipp: over.ipp, total_pages: over.total_pages };
+    var r = { deviceId: deviceId, kind: 'hp', status: status, inks: [], ipp: over.ipp, total_pages: over.total_pages,
+      eprint: over.eprint, eprint_registration: over.eprint_registration };
 
     if (status && hpIsHpStatus(hass.states[status])) {
       var subs = hpSubDevices(hass, deviceId);
       r.inks = hpHpInks(hass, subs);
+      // ePrint (HP cloud printing): "ePrint status" (connectivity) and "ePrint registered" binary sensors.
+      var ep = main.filter(function (e) { return e.entity_id.indexOf('binary_sensor.') === 0 && /eprint/.test(e.entity_id); });
+      if (!r.eprint) {
+        r.eprint = hpPick(ep, hass, function (eid, s) { return s.attributes.device_class === 'connectivity'; }) ||
+          hpPick(ep, hass, function (eid) { return /(statut|status)/.test(eid); });
+      }
+      if (!r.eprint_registration) {
+        r.eprint_registration = hpPick(ep, hass, function (eid, s) {
+          return eid !== r.eprint && (/(registr|enregistr)/.test(eid) || /registered/.test(String(s.attributes.state)));
+        });
+      }
       if (!r.ipp) r.ipp = hpFindIppSensor(hass, deviceId);
       if (!r.total_pages) {
         var all = hpEntitiesOf(hass, subs);
@@ -437,7 +461,7 @@ class HpPrinterCard extends HTMLElement {
   }
 
   _ids(r) {
-    var ids = [r.status, r.ipp, r.total_pages];
+    var ids = [r.status, r.ipp, r.total_pages, r.eprint, r.eprint_registration];
     r.inks.forEach(function (i) { ids.push(i.level, i.status, i.expiry, i.pages_left); });
     return ids.filter(Boolean);
   }
@@ -585,6 +609,13 @@ class HpPrinterCard extends HTMLElement {
       if (errors) chips.push('<span class="chip error"><ha-icon icon="mdi:alert-circle"></ha-icon>' + errors + '</span>');
       if (warns) chips.push('<span class="chip warn"><ha-icon icon="mdi:alert"></ha-icon>' + warns + '</span>');
     }
+    if (!offline && c.show_eprint && this._avail(r.eprint)) {
+      var epOn = this._val(r.eprint) === 'on';
+      var epReg = !r.eprint_registration || !this._avail(r.eprint_registration) || this._val(r.eprint_registration) === 'on';
+      var epKey = !epReg ? 'ep_unregistered' : (epOn ? 'ep_on' : 'ep_off');
+      chips.push('<span class="chip ' + (epOn && epReg ? 'on' : 'muted') + '"><ha-icon icon="' +
+        (epOn && epReg ? 'mdi:cloud-print-outline' : 'mdi:cloud-off-outline') + '"></ha-icon>' + this._t(epKey) + '</span>');
+    }
 
     var sub = '';
     if (offline) {
@@ -667,6 +698,9 @@ class HpPrinterCard extends HTMLElement {
       '.chip ha-icon { --mdc-icon-size: 15px; }' +
       '.chip.error { background: rgba(229,57,53,0.15); color: #e53935; }' +
       '.chip.warn { background: rgba(251,140,0,0.16); color: #ef6c00; }' +
+      '.chip.on, .chip.muted { font-weight: 500; padding-right: 9px; }' +
+      '.chip.on { background: rgba(0,150,214,0.13); color: #0091cf; }' +
+      '.chip.muted { background: var(--secondary-background-color, rgba(128,128,128,0.12)); color: var(--secondary-text-color); }' +
       '.sub { font-size: 12px; color: var(--secondary-text-color); line-height: 1.4; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }' +
       '.sub ha-icon { --mdc-icon-size: 15px; }' +
       '.muted { color: var(--secondary-text-color); opacity: 0.85; }' +
@@ -729,6 +763,7 @@ class HpPrinterCardEditor extends HTMLElement {
           { name: 'show_inks', selector: { boolean: {} } },
           { name: 'show_alerts', selector: { boolean: {} } },
           { name: 'show_stats', selector: { boolean: {} } },
+          { name: 'show_eprint', selector: { boolean: {} } },
         ],
       },
       { name: 'low_threshold', selector: { number: { min: 0, max: 50, step: 1, mode: 'slider', unit_of_measurement: '%' } } },
@@ -744,6 +779,8 @@ class HpPrinterCardEditor extends HTMLElement {
           { name: 'status', selector: { entity: { domain: 'sensor' } } },
           { name: 'ipp', selector: { entity: { domain: 'sensor' } } },
           { name: 'total_pages', selector: { entity: { domain: 'sensor' } } },
+          { name: 'eprint', selector: { entity: { domain: 'binary_sensor' } } },
+          { name: 'eprint_registration', selector: { entity: { domain: 'binary_sensor' } } },
         ],
       },
     ];
@@ -760,7 +797,7 @@ class HpPrinterCardEditor extends HTMLElement {
     this._form.hass = this._hass;
     this._form.schema = this._schema();
     this._form.computeLabel = (s) => {
-      if (['status', 'ipp', 'total_pages'].indexOf(s.name) >= 0) return hpT(lang, 'en_' + s.name);
+      if (['status', 'ipp', 'total_pages', 'eprint', 'eprint_registration'].indexOf(s.name) >= 0) return hpT(lang, 'en_' + s.name);
       return hpT(lang, 'ed_' + s.name);
     };
     this._form.computeHelper = (s) => {

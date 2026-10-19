@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
 ### What's new
 - Clicking the printer picture opens the printer's web admin page in a new tab. The address comes from the device's configuration URL or the IPP integration, and can be set with the new `admin_url` option, also in the visual editor.

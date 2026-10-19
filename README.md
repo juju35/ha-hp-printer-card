@@ -1,8 +1,8 @@
 # ha-hp-printer-card
 
-[![HACS Badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![HACS Validation](https://github.com/juju35/ha-hp-printer-card/actions/workflows/validate.yml/badge.svg)](https://github.com/juju35/ha-hp-printer-card/actions/workflows/validate.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/juju35/ha-hp-printer-card)](https://github.com/juju35/ha-hp-printer-card/releases/latest)
+[![Release](https://img.shields.io/github/v/release/juju35/ha-hp-printer-card)](https://github.com/juju35/ha-hp-printer-card/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Custom Lovelace card for HP printers in Home Assistant, built for the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (`hpprinter`) and also working with the core [IPP](https://www.home-assistant.io/integrations/ipp/) integration.

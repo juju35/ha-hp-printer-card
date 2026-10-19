@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### What's new
+- Clicking the printer picture opens the printer's web admin page in a new tab. The address comes from the device's configuration URL or the IPP integration, and can be set with the new `admin_url` option, also in the visual editor.
+- HP logo in the top right corner of the card; clicking it opens hp.com. It can be hidden with the new `show_logo` option.
+
 ## 1.1.0
 
 ### What's new

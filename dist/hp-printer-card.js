@@ -62,6 +62,11 @@ var HpI18n = {
     ed_show_stats: 'Compteur de pages',
     ed_show_expired: 'Alerte garantie expirée',
     ed_low_threshold: 'Seuil d\'encre faible (%)',
+    ed_show_logo: 'Logo HP',
+    ed_admin_url: 'Page d\'administration (URL)',
+    ed_admin_url_helper: 'Ouverte au clic sur l\'imprimante — laisser vide pour l\'adresse détectée',
+    open_admin: 'Ouvrir la page d\'administration de l\'imprimante',
+    open_hp: 'Ouvrir hp.com',
     ed_image: 'Image personnalisée (URL)',
     ed_image_helper: 'Ex. /local/imprimante.png — laisser vide pour l\'image fournie',
     ed_language: 'Langue',
@@ -137,6 +142,11 @@ var HpI18n = {
     ed_show_stats: 'Page counter',
     ed_show_expired: 'Expired warranty alert',
     ed_low_threshold: 'Low ink threshold (%)',
+    ed_show_logo: 'HP logo',
+    ed_admin_url: 'Admin page (URL)',
+    ed_admin_url_helper: 'Opened when clicking the printer — leave empty for the detected address',
+    open_admin: 'Open the printer admin page',
+    open_hp: 'Open hp.com',
     ed_image: 'Custom picture (URL)',
     ed_image_helper: 'E.g. /local/printer.png — leave empty for the bundled picture',
     ed_language: 'Language',
@@ -376,9 +386,31 @@ function hpFindIppSensor(hass, mainId) {
   return hit ? hit.entity_id : undefined;
 }
 
+// Printer web page: the device's configuration URL, else the host of the IPP sensor's URI.
+function hpAdminUrl(hass, r) {
+  var ids = [r.deviceId];
+  var ippEnt = r.ipp && hass.entities && hass.entities[r.ipp];
+  if (ippEnt && ippEnt.device_id) ids.push(ippEnt.device_id);
+  for (var i = 0; i < ids.length; i++) {
+    var d = hass.devices && hass.devices[ids[i]];
+    if (d && d.configuration_url && /^https?:\/\//i.test(d.configuration_url)) return d.configuration_url;
+  }
+  var s = r.ipp && hass.states[r.ipp];
+  var uris = s && s.attributes.uri_supported;
+  uris = Array.isArray(uris) ? uris : String(uris || '').split(',');
+  for (var j = 0; j < uris.length; j++) {
+    var m = /^ipps?:\/\/(\[[^\]]+\]|[^/:]+)/i.exec(String(uris[j]).trim());
+    if (m) return 'http://' + m[1];
+  }
+  return '';
+}
+
+var HP_LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0096d6"/>' +
+  '<text x="31" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" font-style="italic" fill="#fff">hp</text></svg>';
+
 // ── Card ─────────────────────────────────────────────────────────────────────
 var HP_DEFAULTS = {
-  show_image: true, show_inks: true, show_alerts: true, show_stats: true, show_eprint: true, show_expired: false, low_threshold: 15,
+  show_image: true, show_logo: true, show_inks: true, show_alerts: true, show_stats: true, show_eprint: true, show_expired: false, low_threshold: 15,
 };
 
 class HpPrinterCard extends HTMLElement {
@@ -593,13 +625,17 @@ class HpPrinterCard extends HTMLElement {
     var alerts = offline ? [] : this._alerts(r, state);
 
     // Picture, with the control panel lit in the status color.
+    // Clicking it opens the printer's web admin page, when its address is known.
     var imageHtml = '';
     if (c.show_image) {
       var custom = c.image && String(c.image).trim();
-      imageHtml = '<div class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '">' +
+      var admin = (c.admin_url && String(c.admin_url).trim()) || hpAdminUrl(hass, r);
+      var picTag = admin ? 'a' : 'div';
+      imageHtml = '<' + picTag + ' class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '"' +
+        (admin ? ' href="' + hpEsc(admin) + '" target="_blank" rel="noopener noreferrer" title="' + hpEsc(this._t('open_admin')) + '"' : '') + '>' +
         '<img src="' + hpEsc(custom || HP_PRINTER_IMAGE) + '" alt="">' +
         (custom ? '' : '<svg viewBox="' + HP_SCREEN.box + '" aria-hidden="true"><polygon class="screen" points="' + HP_SCREEN.points + '"/></svg>') +
-      '</div>';
+      '</' + picTag + '>';
     }
 
     var chips = [];
@@ -629,7 +665,11 @@ class HpPrinterCard extends HTMLElement {
         this._t('pages', { n: isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) }) + '</div>';
     }
 
-    var head = '<div class="head">' + imageHtml +
+    var logoHtml = c.show_logo
+      ? '<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="' + hpEsc(this._t('open_hp')) + '">' + HP_LOGO + '</a>'
+      : '';
+
+    var head = '<div class="head">' + logoHtml + imageHtml +
       '<div class="meta">' +
         '<div class="name">' + hpEsc(name) + '</div>' +
         '<div class="status"><ha-icon icon="' + (HP_STATE_ICONS[state] || 'mdi:printer') + '"></ha-icon><span>' + hpEsc(statusText) + '</span></div>' +
@@ -679,8 +719,14 @@ class HpPrinterCard extends HTMLElement {
       ':host { display: block; height: 100%; --hp-color: ' + (color || 'var(--disabled-text-color, #9e9e9e)') + '; }' +
       'ha-card { height: 100%; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 16px; }' +
       '.empty { display: flex; align-items: center; gap: 10px; color: var(--secondary-text-color); }' +
-      '.head { display: flex; align-items: center; gap: 14px; }' +
-      '.pic { position: relative; width: 42%; max-width: 190px; flex-shrink: 0; transition: filter 0.4s, opacity 0.4s; }' +
+      '.head { position: relative; display: flex; align-items: center; gap: 14px; }' +
+      '.logo { position: absolute; top: 0; right: 0; width: 26px; height: 26px; line-height: 0; transition: transform 0.2s; }' +
+      '.logo svg { width: 100%; height: 100%; }' +
+      '.logo:hover { transform: scale(1.08); }' +
+      '.head:has(.logo) .meta { padding-right: 30px; }' +
+      'a.pic { cursor: pointer; }' +
+      'a.pic:hover img { filter: brightness(1.06); }' +
+      '.pic { display: block; position: relative; width: 42%; max-width: 190px; flex-shrink: 0; transition: filter 0.4s, opacity 0.4s; }' +
       '.pic img { display: block; width: 100%; height: auto; }' +
       '.pic svg { position: absolute; inset: 0; width: 100%; height: 100%; }' +
       '.screen { fill: var(--hp-color); opacity: 0.85; filter: drop-shadow(0 0 6px var(--hp-color)); }' +
@@ -760,6 +806,7 @@ class HpPrinterCardEditor extends HTMLElement {
       {
         type: 'grid', name: '', schema: [
           { name: 'show_image', selector: { boolean: {} } },
+          { name: 'show_logo', selector: { boolean: {} } },
           { name: 'show_inks', selector: { boolean: {} } },
           { name: 'show_alerts', selector: { boolean: {} } },
           { name: 'show_stats', selector: { boolean: {} } },
@@ -768,6 +815,7 @@ class HpPrinterCardEditor extends HTMLElement {
       },
       { name: 'low_threshold', selector: { number: { min: 0, max: 50, step: 1, mode: 'slider', unit_of_measurement: '%' } } },
       { name: 'show_expired', selector: { boolean: {} } },
+      { name: 'admin_url', selector: { text: { type: 'url' } } },
       { name: 'image', selector: { text: {} } },
       {
         name: 'language',

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.1
 
 ### Changes
 - The HP logo in the top right corner of the card is now the real HP logo, drawn as a vector so it stays sharp at any size.

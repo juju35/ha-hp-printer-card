@@ -1,4 +1,4 @@
-var HP_PRINTER_CARD_VERSION = '1.2.0';
+var HP_PRINTER_CARD_VERSION = '1.2.1';
 
 // ── i18n ──────────────────────────────────────────────────────────────────────
 var HpI18n = {

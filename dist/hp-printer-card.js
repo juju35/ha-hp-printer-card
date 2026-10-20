@@ -405,8 +405,10 @@ function hpAdminUrl(hass, r) {
   return '';
 }
 
-var HP_LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#0096d6"/>' +
-  '<text x="31" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" font-style="italic" fill="#fff">hp</text></svg>';
+var HP_LOGO = '<svg viewBox="0 0 1280 1280" aria-hidden="true"><defs><clipPath id="hp-logo-clip"><circle cx="640" cy="640" r="640"/></clipPath></defs>' +
+  '<circle cx="640" cy="640" r="640" fill="#024ad8"/><g clip-path="url(#hp-logo-clip)" fill="#fff">' +
+  '<path d="M485-20H619L482 360H597Q645 360 670 393Q695 427 676 477L515 918H380L552 444H451L277 918H142L349 360Z"/>' +
+  '<path fill-rule="evenodd" d="M819 358H1070Q1118 358 1143 391Q1168 424 1151 470L1009 866Q1000 890 977 905Q956 918 932 918H752L614 1300H485ZM924 441H1026L883 832H781Z"/></g></svg>';
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 var HP_DEFAULTS = {

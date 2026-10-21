@@ -4,7 +4,7 @@
 
 ### Changes
 - Status, alert, ink warning and ePrint colors come from the Home Assistant theme (`--success-color`, `--info-color`, `--warning-color`, `--error-color`) with the Home Assistant defaults as fallbacks.
-- Printer name in 18px and status, alert counters and ePrint as the same 12px pills as the other juju35 cards.
+- Printer name in 18px and status, alert counters and ePrint as the same 12px pills as the other ha-* cards.
 - Section titles, ink labels and tank corners aligned with the other cards.
 
 ### Development

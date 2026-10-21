@@ -34,7 +34,7 @@ Pick the printer, the card finds all its entities by itself.
 
 ## Prerequisites
 
-- Home Assistant with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (recommended) or the [IPP](https://www.home-assistant.io/integrations/ipp/) integration set up
+- Home Assistant 2024.8 or later with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (recommended) or the [IPP](https://www.home-assistant.io/integrations/ipp/) integration set up
 - With both integrations set up for the same printer, the card uses HP Printer for status and inks and picks up the IPP printer sensor by itself for paper and cover alerts
 
 ## Installation

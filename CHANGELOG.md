@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0
+
+### Changes
+- Status, alert, ink warning and ePrint colors come from the Home Assistant theme (`--success-color`, `--info-color`, `--warning-color`, `--error-color`) with the Home Assistant defaults as fallbacks.
+- Printer name in 18px and status, alert counters and ePrint as the same 12px pills as the other juju35 cards.
+- Section titles, ink labels and tank corners aligned with the other cards.
+
+### Development
+- The card source moves to `src/hp-printer-card.js`; `npm run build` stamps the version from `package.json` into `dist/hp-printer-card.js`, and CI checks that `dist/` is up to date.
+- `npm run screenshots` renders the README screenshots with a mock HP printer.
+- Releases are published when `version` in `package.json` has no tag yet.
+
 ## 1.2.1
 
 ### Changes

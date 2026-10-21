@@ -32,7 +32,7 @@ Pick the printer, the card finds all its entities by itself.
 - Light and dark theme compatible
 - Single file, no dependencies, HACS-ready
 
-## Requirements
+## Prerequisites
 
 - Home Assistant with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (recommended) or the [IPP](https://www.home-assistant.io/integrations/ipp/) integration set up
 - With both integrations set up for the same printer, the card uses HP Printer for status and inks and picks up the IPP printer sensor by itself for paper and cover alerts
@@ -137,6 +137,12 @@ Keys accepted under `entities`:
 
 Cartridges are always found from the printer's devices.
 
+## Screenshots
+
+| Light | Dark (French) | Printer offline |
+|---|---|---|
+| ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) |
+
 ## How it works
 
 The HP Printer integration creates one device per part of the printer (each cartridge, the printhead, the print, scan and copy counters) linked to the main device. The card reads the entity registry to list them, then for each cartridge finds its level, slot, status and warranty date. The printer is shown as **offline** when its status sensor reports `off` (that's what the integration does when the printer stops answering) or is unavailable.
@@ -144,6 +150,21 @@ The HP Printer integration creates one device per part of the printer (each cart
 With the IPP integration only, the card reads the `<color> cartridge` sensors and the printer sensor of the IPP device.
 
 The bundled picture is an HP OfficeJet Pro 9010; set `image` to use a picture of your own model (the lit control panel is only drawn on the bundled picture).
+
+## Development
+
+```bash
+npm install
+npm run build        # stamps the version of package.json into dist/hp-printer-card.js
+npm run check        # verifies dist/ is up to date (run in CI)
+npm run screenshots  # renders the card with a mock HP printer into screenshots/
+```
+
+### Releasing
+
+1. Bump `version` in `package.json` and run `npm run build`
+2. Add a `## <version>` section at the top of [CHANGELOG.md](CHANGELOG.md)
+3. Push to `main`: the **Release** workflow creates the tag and the GitHub release with the changelog section as notes, and attaches `hp-printer-card.js`
 
 ## Translations
 

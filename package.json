@@ -1,6 +1,6 @@
 {
   "name": "ha-hp-printer-card",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Lovelace card for HP printers (HP Printer and IPP integrations) in Home Assistant.",
   "private": true,
   "type": "module",

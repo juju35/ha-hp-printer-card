@@ -171,13 +171,11 @@ function hpT(lang, key) {
 }
 
 function hpEsc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function hpFill(str, vars) {
-  return String(str).replace(/\{(\w)\}/g, function (m, k) { return vars[k] != null ? vars[k] : m; });
+  return String(str).replace(/\{(\w)\}/g, (m, k) => vars[k] != null ? vars[k] : m);
 }
 
 // ── Printer picture ──────────────────────────────────────────────────────────
@@ -225,7 +223,7 @@ var HP_INK_COLORS = {
   ink: '#9e9e9e',
 };
 
-var HP_INK_SHORT = { black: 'K', cyan: 'C', magenta: 'M', yellow: 'Y', tricolor: 'CMY', ink: '•' };
+var _HP_INK_SHORT = { black: 'K', cyan: 'C', magenta: 'M', yellow: 'Y', tricolor: 'CMY', ink: '•' };
 
 function hpInkColor(text) {
   var t = String(text || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -256,82 +254,76 @@ function hpCartridgeProblem(state) {
 }
 
 // ── Discovery ────────────────────────────────────────────────────────────────
-function hpState(hass, id) { return id ? hass.states[id] : undefined; }
+function _hpState(hass, id) { return id ? hass.states[id] : undefined; }
 
 function hpIsHpStatus(s) {
-  var o = (s && s.attributes.options) || [];
+  var o = (s?.attributes.options) || [];
   return o.indexOf('inpowersave') >= 0 || (o.indexOf('ready') >= 0 && o.indexOf('scanprocessing') >= 0);
 }
 
 function hpIsIppStatus(s) {
-  var a = (s && s.attributes) || {};
+  var a = (s?.attributes) || {};
   var o = a.options || [];
   return a.uri_supported !== undefined || (o.indexOf('idle') >= 0 && o.indexOf('printing') >= 0 && o.indexOf('stopped') >= 0);
 }
 
 function hpEntitiesOf(hass, deviceIds) {
-  if (!hass || !hass.entities) return [];
-  return Object.values(hass.entities).filter(function (e) {
-    return deviceIds.indexOf(e.device_id) >= 0 && !e.hidden && hass.states[e.entity_id];
-  });
+  if (!hass?.entities) return [];
+  return Object.values(hass.entities).filter((e) => deviceIds.indexOf(e.device_id) >= 0 && !e.hidden && hass.states[e.entity_id]);
 }
 
 function hpDeviceName(hass, id) {
-  var d = hass && hass.devices && hass.devices[id];
+  var d = hass?.devices?.[id];
   return d ? String(d.name_by_user || d.name || '').trim() : '';
 }
 
 // Printers: devices carrying an HP Printer status sensor or an IPP printer sensor.
 function hpFindPrinters(hass) {
-  if (!hass || !hass.entities) return [];
+  if (!hass?.entities) return [];
   var out = [];
-  Object.values(hass.entities).forEach(function (e) {
+  Object.values(hass.entities).forEach((e) => {
     if (!e.device_id || e.entity_id.indexOf('sensor.') !== 0) return;
     var s = hass.states[e.entity_id];
     var kind = hpIsHpStatus(s) ? 'hp' : (hpIsIppStatus(s) ? 'ipp' : null);
-    if (kind && !out.some(function (p) { return p.id === e.device_id; })) out.push({ id: e.device_id, kind: kind });
+    if (kind && !out.some((p) => p.id === e.device_id)) out.push({ id: e.device_id, kind: kind });
   });
   // HP Printer integration first: it carries the richer data.
-  return out.sort(function (a, b) { return (a.kind === 'hp' ? 0 : 1) - (b.kind === 'hp' ? 0 : 1); });
+  return out.sort((a, b) => (a.kind === 'hp' ? 0 : 1) - (b.kind === 'hp' ? 0 : 1));
 }
 
 // The HP Printer integration splits a printer into one device per part
 // (cartridges, printhead, printer counters…) linked to the main one.
 function hpSubDevices(hass, mainId) {
-  if (!hass || !hass.devices) return [];
+  if (!hass?.devices) return [];
   var main = hass.devices[mainId];
   var mainName = hpDeviceName(hass, mainId);
-  return Object.keys(hass.devices).filter(function (id) {
+  return Object.keys(hass.devices).filter((id) => {
     if (id === mainId) return false;
     var d = hass.devices[id];
     if (d.via_device_id === mainId) return true;
-    return !!mainName && main && d.manufacturer === main.manufacturer && String(d.name || '').indexOf(String(main.name || '') + ' ') === 0;
+    return !!mainName && main && d.manufacturer === main.manufacturer && String(d.name || '').indexOf(`${String(main.name || '')} `) === 0;
   });
 }
 
-function hpUnit(s) { return s && s.attributes.unit_of_measurement; }
+function hpUnit(s) { return s?.attributes.unit_of_measurement; }
 
 function hpPick(list, hass, test) {
-  var hit = list.find(function (e) { return test(e.entity_id, hass.states[e.entity_id]); });
+  var hit = list.find((e) => test(e.entity_id, hass.states[e.entity_id]));
   return hit ? hit.entity_id : undefined;
 }
 
 // Builds the cartridge list of a HP Printer device: one entry per consumable sub-device.
 function hpHpInks(hass, subIds) {
   var inks = [];
-  subIds.forEach(function (id) {
+  subIds.forEach((id) => {
     var list = hpEntitiesOf(hass, [id]);
-    var level = hpPick(list, hass, function (eid, s) {
-      return eid.indexOf('sensor.') === 0 && hpUnit(s) === '%';
-    });
-    var typeId = hpPick(list, hass, function (eid, s) {
+    var level = hpPick(list, hass, (eid, s) => eid.indexOf('sensor.') === 0 && hpUnit(s) === '%');
+    var typeId = hpPick(list, hass, (eid, s) => {
       var o = (s.attributes.options || []);
       return eid.indexOf('sensor.') === 0 && o.indexOf('printhead') >= 0 && o.indexOf('ink') >= 0;
     });
     var type = typeId ? hass.states[typeId].state : '';
-    var status = hpPick(list, hass, function (eid, s) {
-      return eid.indexOf('binary_sensor.') === 0 && s.attributes.state !== undefined && /(statut|status|state|etat)$/.test(eid);
-    });
+    var status = hpPick(list, hass, (eid, s) => eid.indexOf('binary_sensor.') === 0 && s.attributes.state !== undefined && /(statut|status|state|etat)$/.test(eid));
     if (!level && type !== 'printhead' && !(status && /printhead|tete/.test(status))) return;
     var name = hpDeviceName(hass, id);
     inks.push({
@@ -341,34 +333,30 @@ function hpHpInks(hass, subIds) {
       color: hpInkColor(name) || hpInkColor(level) || 'ink',
       level: level,
       status: status,
-      station: hpPick(list, hass, function (eid) { return /(_emplacement|_station|_slot)$/.test(eid); }),
-      expiry: hpPick(list, hass, function (eid, s) {
-        return s.attributes.device_class === 'timestamp' && /(expiration|expiry|warranty|garantie)/.test(eid);
-      }),
-      pages_left: hpPick(list, hass, function (eid, s) {
-        return hpUnit(s) === 'pages' && s.attributes.state_class === 'measurement';
-      }),
+      station: hpPick(list, hass, (eid) => /(_emplacement|_station|_slot)$/.test(eid)),
+      expiry: hpPick(list, hass, (eid, s) => s.attributes.device_class === 'timestamp' && /(expiration|expiry|warranty|garantie)/.test(eid)),
+      pages_left: hpPick(list, hass, (_eid, s) => hpUnit(s) === 'pages' && s.attributes.state_class === 'measurement'),
     });
   });
   var order = { black: 0, cyan: 1, magenta: 2, yellow: 3, tricolor: 4, ink: 5 };
-  return inks.sort(function (a, b) {
+  return inks.sort((a, b) => {
     var sa = a.station ? Number(hass.states[a.station].state) : NaN;
     var sb = b.station ? Number(hass.states[b.station].state) : NaN;
-    if (!isNaN(sa) && !isNaN(sb) && sa !== sb) return sa - sb;
+    if (!Number.isNaN(sa) && !Number.isNaN(sb) && sa !== sb) return sa - sb;
     return (order[a.color] || 9) - (order[b.color] || 9);
   });
 }
 
 // IPP integration: one "<color> cartridge" sensor per marker, on the same device.
 function hpIppInks(hass, list) {
-  return list.filter(function (e) {
+  return list.filter((e) => {
     var s = hass.states[e.entity_id];
     return e.entity_id.indexOf('sensor.') === 0 && s.attributes.marker_type !== undefined;
-  }).map(function (e) {
+  }).map((e) => {
     var s = hass.states[e.entity_id];
     return { name: s.attributes.friendly_name, color: hpInkColor(e.entity_id) || hpInkColor(s.attributes.friendly_name) || 'ink',
       level: e.entity_id, low: s.attributes.marker_low_level };
-  }).sort(function (a, b) {
+  }).sort((a, b) => {
     var order = { black: 0, cyan: 1, magenta: 2, yellow: 3, tricolor: 4, ink: 5 };
     return order[a.color] - order[b.color];
   });
@@ -376,12 +364,12 @@ function hpIppInks(hass, list) {
 
 // IPP printer sensor matching a HP Printer device (same model), for paper/cover alerts.
 function hpFindIppSensor(hass, mainId) {
-  var main = hass.devices && hass.devices[mainId];
+  var main = hass.devices?.[mainId];
   if (!main || !hass.entities) return undefined;
-  var hit = Object.values(hass.entities).find(function (e) {
+  var hit = Object.values(hass.entities).find((e) => {
     if (e.entity_id.indexOf('sensor.') !== 0 || e.device_id === mainId) return false;
     var d = hass.devices[e.device_id];
-    return d && d.model && d.model === main.model && hpIsIppStatus(hass.states[e.entity_id]);
+    return d?.model && d.model === main.model && hpIsIppStatus(hass.states[e.entity_id]);
   });
   return hit ? hit.entity_id : undefined;
 }
@@ -389,18 +377,18 @@ function hpFindIppSensor(hass, mainId) {
 // Printer web page: the device's configuration URL, else the host of the IPP sensor's URI.
 function hpAdminUrl(hass, r) {
   var ids = [r.deviceId];
-  var ippEnt = r.ipp && hass.entities && hass.entities[r.ipp];
-  if (ippEnt && ippEnt.device_id) ids.push(ippEnt.device_id);
+  var ippEnt = r.ipp && hass.entities?.[r.ipp];
+  if (ippEnt?.device_id) ids.push(ippEnt.device_id);
   for (var i = 0; i < ids.length; i++) {
-    var d = hass.devices && hass.devices[ids[i]];
-    if (d && d.configuration_url && /^https?:\/\//i.test(d.configuration_url)) return d.configuration_url;
+    var d = hass.devices?.[ids[i]];
+    if (d?.configuration_url && /^https?:\/\//i.test(d.configuration_url)) return d.configuration_url;
   }
   var s = r.ipp && hass.states[r.ipp];
-  var uris = s && s.attributes.uri_supported;
+  var uris = s?.attributes.uri_supported;
   uris = Array.isArray(uris) ? uris : String(uris || '').split(',');
   for (var j = 0; j < uris.length; j++) {
     var m = /^ipps?:\/\/(\[[^\]]+\]|[^/:]+)/i.exec(String(uris[j]).trim());
-    if (m) return 'http://' + m[1];
+    if (m) return `http://${m[1]}`;
   }
   return '';
 }
@@ -443,7 +431,7 @@ class HpPrinterCard extends HTMLElement {
   getGridOptions() { return { columns: 12, min_columns: 6 }; }
 
   _lang() {
-    var l = (this._config && this._config.language) || (this._hass && this._hass.language) || document.documentElement.lang || 'en';
+    var l = (this._config?.language) || (this._hass?.language) || document.documentElement.lang || 'en';
     l = l.split('-')[0];
     return HpI18n[l] ? l : 'en';
   }
@@ -453,12 +441,12 @@ class HpPrinterCard extends HTMLElement {
   _resolve() {
     var hass = this._hass, c = this._config, over = c.entities || {};
     var deviceId = c.device_id;
-    if (!deviceId && c.entity && hass.entities && hass.entities[c.entity]) deviceId = hass.entities[c.entity].device_id;
-    if (!deviceId && over.status && hass.entities && hass.entities[over.status]) deviceId = hass.entities[over.status].device_id;
-    if (!deviceId) { var p = hpFindPrinters(hass)[0]; deviceId = p && p.id; }
+    if (!deviceId && c.entity && hass.entities?.[c.entity]) deviceId = hass.entities[c.entity].device_id;
+    if (!deviceId && over.status && hass.entities?.[over.status]) deviceId = hass.entities[over.status].device_id;
+    if (!deviceId) { var p = hpFindPrinters(hass)[0]; deviceId = p?.id; }
 
     var main = hpEntitiesOf(hass, [deviceId]);
-    var status = over.status || hpPick(main, hass, function (eid, s) { return eid.indexOf('sensor.') === 0 && hpIsHpStatus(s); });
+    var status = over.status || hpPick(main, hass, (eid, s) => eid.indexOf('sensor.') === 0 && hpIsHpStatus(s));
     var r = { deviceId: deviceId, kind: 'hp', status: status, inks: [], ipp: over.ipp, total_pages: over.total_pages,
       eprint: over.eprint, eprint_registration: over.eprint_registration };
 
@@ -466,28 +454,24 @@ class HpPrinterCard extends HTMLElement {
       var subs = hpSubDevices(hass, deviceId);
       r.inks = hpHpInks(hass, subs);
       // ePrint (HP cloud printing): "ePrint status" (connectivity) and "ePrint registered" binary sensors.
-      var ep = main.filter(function (e) { return e.entity_id.indexOf('binary_sensor.') === 0 && /eprint/.test(e.entity_id); });
+      var ep = main.filter((e) => e.entity_id.indexOf('binary_sensor.') === 0 && /eprint/.test(e.entity_id));
       if (!r.eprint) {
-        r.eprint = hpPick(ep, hass, function (eid, s) { return s.attributes.device_class === 'connectivity'; }) ||
-          hpPick(ep, hass, function (eid) { return /(statut|status)/.test(eid); });
+        r.eprint = hpPick(ep, hass, (_eid, s) => s.attributes.device_class === 'connectivity') ||
+          hpPick(ep, hass, (eid) => /(statut|status)/.test(eid));
       }
       if (!r.eprint_registration) {
-        r.eprint_registration = hpPick(ep, hass, function (eid, s) {
-          return eid !== r.eprint && (/(registr|enregistr)/.test(eid) || /registered/.test(String(s.attributes.state)));
-        });
+        r.eprint_registration = hpPick(ep, hass, (eid, s) => eid !== r.eprint && (/(registr|enregistr)/.test(eid) || /registered/.test(String(s.attributes.state))));
       }
       if (!r.ipp) r.ipp = hpFindIppSensor(hass, deviceId);
       if (!r.total_pages) {
         var all = hpEntitiesOf(hass, subs);
-        r.total_pages = hpPick(all, hass, function (eid) { return /_printer_total_pages$/.test(eid); }) ||
-          hpPick(all, hass, function (eid, s) {
-            return hpUnit(s) === 'pages' && s.attributes.state_class === 'total_increasing' && /total_(pages|impressions)$/.test(eid);
-          });
+        r.total_pages = hpPick(all, hass, (eid) => /_printer_total_pages$/.test(eid)) ||
+          hpPick(all, hass, (eid, s) => hpUnit(s) === 'pages' && s.attributes.state_class === 'total_increasing' && /total_(pages|impressions)$/.test(eid));
       }
     } else {
       // IPP-only printer (or status forced to an IPP sensor).
       r.kind = 'ipp';
-      r.status = status || hpPick(main, hass, function (eid, s) { return eid.indexOf('sensor.') === 0 && hpIsIppStatus(s); });
+      r.status = status || hpPick(main, hass, (eid, s) => eid.indexOf('sensor.') === 0 && hpIsIppStatus(s));
       r.ipp = r.ipp || r.status;
       r.inks = hpIppInks(hass, main);
     }
@@ -496,7 +480,7 @@ class HpPrinterCard extends HTMLElement {
 
   _ids(r) {
     var ids = [r.status, r.ipp, r.total_pages, r.eprint, r.eprint_registration];
-    r.inks.forEach(function (i) { ids.push(i.level, i.status, i.expiry, i.pages_left); });
+    r.inks.forEach((i) => { ids.push(i.level, i.status, i.expiry, i.pages_left); });
     return ids.filter(Boolean);
   }
 
@@ -504,7 +488,7 @@ class HpPrinterCard extends HTMLElement {
     if (!this._config || !this._hass || !this.shadowRoot) return;
     var r = this._resolve();
     var hass = this._hass;
-    var sig = JSON.stringify([this._lang(), this._config, r.deviceId, this._ids(r).map(function (id) {
+    var sig = JSON.stringify([this._lang(), this._config, r.deviceId, this._ids(r).map((id) => {
       var s = hass.states[id];
       return s ? [id, s.state, s.attributes.state, s.attributes.state_reason, s.attributes.state_message] : null;
     })]);
@@ -527,7 +511,7 @@ class HpPrinterCard extends HTMLElement {
   }
 
   _inkLabel(ink) {
-    return this._t('c_' + ink.color);
+    return this._t(`c_${ink.color}`);
   }
 
   // Label used inside a sentence: lower case in French ("encre jaune"), as is in English.
@@ -535,20 +519,20 @@ class HpPrinterCard extends HTMLElement {
     var l = ink.printhead ? this._t('printhead') : this._inkLabel(ink);
     if (this._lang() !== 'fr') return l;
     // "encre noire", "cartouche noire": the adjective agrees with the feminine noun.
-    var w = hpT('fr', 'cw_' + ink.color);
-    return w === 'cw_' + ink.color ? l.toLowerCase() : w;
+    var w = hpT('fr', `cw_${ink.color}`);
+    return w === `cw_${ink.color}` ? l.toLowerCase() : w;
   }
 
   _alerts(r, state) {
     var c = this._config, out = [];
     var low = Number(c.low_threshold);
-    if (isNaN(low)) low = 15;
+    if (Number.isNaN(low)) low = 15;
     var critical = Math.min(low, 5);
     r.inks.forEach((ink) => {
       var label = this._inkWord(ink);
       if (!ink.printhead) {
         var p = this._num(ink.level);
-        if (!isNaN(p) && p <= low) {
+        if (!Number.isNaN(p) && p <= low) {
           out.push({ level: p <= critical ? 'error' : 'warn', icon: 'mdi:water-alert',
             text: this._t(p <= critical ? 'al_empty' : 'al_low', { c: label, p: Math.round(p) }) });
         }
@@ -561,7 +545,7 @@ class HpPrinterCard extends HTMLElement {
       }
       if (c.show_expired && ink.expiry && this._avail(ink.expiry)) {
         var d = new Date(this._val(ink.expiry));
-        if (!isNaN(d.getTime()) && d.getTime() < Date.now()) {
+        if (!Number.isNaN(d.getTime()) && d.getTime() < Date.now()) {
           out.push({ level: 'info', icon: 'mdi:calendar-alert', text: this._t('al_expired', { c: label }) });
         }
       }
@@ -569,7 +553,7 @@ class HpPrinterCard extends HTMLElement {
     if (state === 'stopped') out.push({ level: 'error', icon: 'mdi:printer-alert', text: this._t('al_stopped') });
     out = out.concat(this._ippAlerts(r));
     var rank = { error: 0, warn: 1, info: 2 };
-    return out.sort(function (a, b) { return rank[a.level] - rank[b.level]; });
+    return out.sort((a, b) => rank[a.level] - rank[b.level]);
   }
 
   // IPP "printer-state-reasons": media-empty-error, media-jam-warning, door-open…
@@ -580,15 +564,15 @@ class HpPrinterCard extends HTMLElement {
     var reasons = Array.isArray(raw) ? raw : String(raw || '').split(',');
     var seen = {};
     var out = [];
-    reasons.map(function (x) { return String(x).trim(); }).forEach((reason) => {
+    reasons.map((x) => String(x).trim()).forEach((reason) => {
       if (!reason || reason === 'none' || reason === 'None') return;
       var level = /-error$/.test(reason) ? 'error' : (/-report$/.test(reason) ? 'info' : 'warn');
       var base = reason.replace(/-(error|warning|report)$/, '');
       // Ink levels are already covered by the cartridges.
       if (/^marker-supply-low|^toner-low|^marker-waste/.test(base) && r.inks.length) return;
-      var key = 'ipp_' + base.replace(/-/g, '_');
+      var key = `ipp_${base.replace(/-/g, '_')}`;
       var text = this._t(key);
-      if (text === key) text = base.replace(/-/g, ' ').replace(/^./, function (ch) { return ch.toUpperCase(); });
+      if (text === key) text = base.replace(/-/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
       if (seen[text]) return;
       seen[text] = true;
       out.push({ level: level, icon: /media|paper|tray/.test(base) ? 'mdi:paper-roll-outline' : 'mdi:alert', text: text });
@@ -605,7 +589,7 @@ class HpPrinterCard extends HTMLElement {
         if (Math.abs(secs) >= units[i][1]) return rtf.format(Math.round(secs / units[i][1]), units[i][0]);
       }
       return rtf.format(0, 'minute');
-    } catch (e) {
+    } catch (_e) {
       return date.toLocaleString(this._lang());
     }
   }
@@ -616,14 +600,14 @@ class HpPrinterCard extends HTMLElement {
     var name = c.name || deviceName.replace(/\s*\([\d.]+\)\s*$/, '') || this._t('printer');
 
     if (!r.deviceId || !r.status) {
-      this.shadowRoot.innerHTML = this._styles() + '<ha-card><div class="empty"><ha-icon icon="mdi:printer-off"></ha-icon>' + this._t('no_device') + '</div></ha-card>';
+      this.shadowRoot.innerHTML = `${this._styles()}<ha-card><div class="empty"><ha-icon icon="mdi:printer-off"></ha-icon>${this._t('no_device')}</div></ha-card>`;
       return;
     }
 
     var state = this._state(r);
     var offline = state === 'offline';
     var color = offline ? 'var(--disabled-text-color, #9e9e9e)' : (HP_STATE_COLORS[state] || 'var(--secondary-text-color)');
-    var statusText = this._t('st_' + state);
+    var statusText = this._t(`st_${state}`);
     var alerts = offline ? [] : this._alerts(r, state);
 
     // Picture, with the control panel lit in the status color.
@@ -634,18 +618,18 @@ class HpPrinterCard extends HTMLElement {
       var admin = (c.admin_url && String(c.admin_url).trim()) || hpAdminUrl(hass, r);
       var picTag = admin ? 'a' : 'div';
       imageHtml = '<' + picTag + ' class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '"' +
-        (admin ? ' href="' + hpEsc(admin) + '" target="_blank" rel="noopener noreferrer" title="' + hpEsc(this._t('open_admin')) + '"' : '') + '>' +
+        (admin ? ` href="${hpEsc(admin)}" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_admin'))}"` : '') + '>' +
         '<img src="' + hpEsc(custom || HP_PRINTER_IMAGE) + '" alt="">' +
-        (custom ? '' : '<svg viewBox="' + HP_SCREEN.box + '" aria-hidden="true"><polygon class="screen" points="' + HP_SCREEN.points + '"/></svg>') +
+        (custom ? '' : `<svg viewBox="${HP_SCREEN.box}" aria-hidden="true"><polygon class="screen" points="${HP_SCREEN.points}"/></svg>`) +
       '</' + picTag + '>';
     }
 
     var chips = [];
     if (!offline && c.show_alerts) {
-      var errors = alerts.filter(function (a) { return a.level === 'error'; }).length;
-      var warns = alerts.filter(function (a) { return a.level === 'warn'; }).length;
-      if (errors) chips.push('<span class="chip error"><ha-icon icon="mdi:alert-circle"></ha-icon>' + errors + '</span>');
-      if (warns) chips.push('<span class="chip warn"><ha-icon icon="mdi:alert"></ha-icon>' + warns + '</span>');
+      var errors = alerts.filter((a) => a.level === 'error').length;
+      var warns = alerts.filter((a) => a.level === 'warn').length;
+      if (errors) chips.push(`<span class="chip error"><ha-icon icon="mdi:alert-circle"></ha-icon>${errors}</span>`);
+      if (warns) chips.push(`<span class="chip warn"><ha-icon icon="mdi:alert"></ha-icon>${warns}</span>`);
     }
     if (!offline && c.show_eprint && this._avail(r.eprint)) {
       var epOn = this._val(r.eprint) === 'on';
@@ -658,44 +642,44 @@ class HpPrinterCard extends HTMLElement {
     var sub = '';
     if (offline) {
       var st = hass.states[r.status];
-      var since = st && st.last_changed ? new Date(st.last_changed) : null;
+      var since = st?.last_changed ? new Date(st.last_changed) : null;
       sub = '<div class="sub">' + this._t('offline_text') +
-        (since && !isNaN(since.getTime()) ? '<br><span class="muted">' + hpEsc(this._t('last_seen', { t: this._relative(since) })) + '</span>' : '') + '</div>';
+        (since && !Number.isNaN(since.getTime()) ? `<br><span class="muted">${hpEsc(this._t('last_seen', { t: this._relative(since) }))}</span>` : '') + '</div>';
     } else if (c.show_stats && this._avail(r.total_pages)) {
       var n = Number(this._val(r.total_pages));
       sub = '<div class="sub muted"><ha-icon icon="mdi:file-document-multiple-outline"></ha-icon>' +
-        this._t('pages', { n: isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) }) + '</div>';
+        this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) }) + '</div>';
     }
 
     var logoHtml = c.show_logo
-      ? '<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="' + hpEsc(this._t('open_hp')) + '">' + HP_LOGO + '</a>'
+      ? `<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_hp'))}">${HP_LOGO}</a>`
       : '';
 
     var head = '<div class="head">' + logoHtml + imageHtml +
       '<div class="meta">' +
         '<div class="name">' + hpEsc(name) + '</div>' +
         '<div class="status"><ha-icon icon="' + (HP_STATE_ICONS[state] || 'mdi:printer') + '"></ha-icon><span>' + hpEsc(statusText) + '</span></div>' +
-        (chips.length ? '<div class="chips">' + chips.join('') + '</div>' : '') +
+        (chips.length ? `<div class="chips">${chips.join('')}</div>` : '') +
         sub +
       '</div></div>';
 
     var inksHtml = '';
-    var cartridges = r.inks.filter(function (i) { return !i.printhead && i.level; });
+    var cartridges = r.inks.filter((i) => !i.printhead && i.level);
     if (!offline && c.show_inks && cartridges.length) {
       var low = Number(c.low_threshold);
       inksHtml = '<div class="section"><div class="section-title">' + this._t('inks') + '</div><div class="inks" style="--n:' + cartridges.length + '">' +
         cartridges.map((ink) => {
           var p = this._num(ink.level);
-          var pct = isNaN(p) ? 0 : Math.max(0, Math.min(100, p));
-          var bad = ink.status && this._val(ink.status) === 'off' && !hpCartridgeOk((hass.states[ink.status] || {}).attributes.state);
-          var isLow = !isNaN(p) && p <= (isNaN(low) ? 15 : low);
+          var pct = Number.isNaN(p) ? 0 : Math.max(0, Math.min(100, p));
+          var bad = ink.status && this._val(ink.status) === 'off' && !hpCartridgeOk(hass.states[ink.status]?.attributes.state);
+          var isLow = !Number.isNaN(p) && p <= (Number.isNaN(low) ? 15 : low);
           var left = Number(this._val(ink.pages_left));
-          var title = this._inkLabel(ink) + (isNaN(p) ? '' : ' · ' + Math.round(p) + ' %') +
-            (this._avail(ink.pages_left) && !isNaN(left) ? ' · ' + this._t('pages_left', { n: left }) : '');
-          return '<div class="ink' + (isLow ? ' low' : '') + (!isNaN(p) && p <= Math.min(isNaN(low) ? 15 : low, 5) ? ' crit' : '') + (bad ? ' bad' : '') + '" title="' + hpEsc(title) + '">' +
+          var title = this._inkLabel(ink) + (Number.isNaN(p) ? '' : ` · ${Math.round(p)} %`) +
+            (this._avail(ink.pages_left) && !Number.isNaN(left) ? ` · ${this._t('pages_left', { n: left })}` : '');
+          return '<div class="ink' + (isLow ? ' low' : '') + (!Number.isNaN(p) && p <= Math.min(Number.isNaN(low) ? 15 : low, 5) ? ' crit' : '') + (bad ? ' bad' : '') + '" title="' + hpEsc(title) + '">' +
             '<div class="tank"><div class="level" style="height:' + pct + '%;background:' + HP_INK_COLORS[ink.color] + '"></div>' +
               (isLow || bad ? '<ha-icon class="flag" icon="mdi:alert"></ha-icon>' : '') + '</div>' +
-            '<div class="pct">' + (isNaN(p) ? '—' : Math.round(p) + '<small>%</small>') + '</div>' +
+            '<div class="pct">' + (Number.isNaN(p) ? '—' : `${Math.round(p)}<small>%</small>`) + '</div>' +
             '<div class="lbl">' + hpEsc(this._inkLabel(ink)) + '</div>' +
           '</div>';
         }).join('') + '</div></div>';
@@ -705,15 +689,15 @@ class HpPrinterCard extends HTMLElement {
     if (!offline && c.show_alerts) {
       alertsHtml = '<div class="section"><div class="section-title">' + this._t('alerts') + '</div>' +
         (alerts.length
-          ? '<div class="alerts">' + alerts.map(function (a) {
+          ? `<div class="alerts">${alerts.map((a) => {
             var txt = String(a.text);
-            return '<div class="alert ' + a.level + '"><ha-icon icon="' + a.icon + '"></ha-icon><span>' + hpEsc(txt.charAt(0).toUpperCase() + txt.slice(1)) + '</span></div>';
-          }).join('') + '</div>'
-          : '<div class="alert ok"><ha-icon icon="mdi:check-circle"></ha-icon><span>' + this._t('no_alerts') + '</span></div>') +
+            return `<div class="alert ${a.level}"><ha-icon icon="${a.icon}"></ha-icon><span>${hpEsc(txt.charAt(0).toUpperCase() + txt.slice(1))}</span></div>`;
+          }).join('')}</div>`
+          : `<div class="alert ok"><ha-icon icon="mdi:check-circle"></ha-icon><span>${this._t('no_alerts')}</span></div>`) +
       '</div>';
     }
 
-    this.shadowRoot.innerHTML = this._styles(color) + '<ha-card class="' + (offline ? 'offline' : '') + '">' + head + inksHtml + alertsHtml + '</ha-card>';
+    this.shadowRoot.innerHTML = `${this._styles(color)}<ha-card class="${offline ? 'offline' : ''}">${head}${inksHtml}${alertsHtml}</ha-card>`;
   }
 
   _styles(color) {
@@ -785,9 +769,9 @@ class HpPrinterCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
-    var prevLang = this._hass && this._hass.language;
+    var prevLang = this._hass?.language;
     this._hass = hass;
-    if (this._form && prevLang === (hass && hass.language)) {
+    if (this._form && prevLang === (hass?.language)) {
       this._form.hass = hass;
     } else {
       this._render();
@@ -795,7 +779,7 @@ class HpPrinterCardEditor extends HTMLElement {
   }
 
   _lang() {
-    var lang = this._hass && this._hass.language ? this._hass.language.split('-')[0] : 'en';
+    var lang = this._hass?.language ? this._hass.language.split('-')[0] : 'en';
     return HpI18n[lang] ? lang : 'en';
   }
 
@@ -846,11 +830,11 @@ class HpPrinterCardEditor extends HTMLElement {
     this._form.hass = this._hass;
     this._form.schema = this._schema();
     this._form.computeLabel = (s) => {
-      if (['status', 'ipp', 'total_pages', 'eprint', 'eprint_registration'].indexOf(s.name) >= 0) return hpT(lang, 'en_' + s.name);
-      return hpT(lang, 'ed_' + s.name);
+      if (['status', 'ipp', 'total_pages', 'eprint', 'eprint_registration'].indexOf(s.name) >= 0) return hpT(lang, `en_${s.name}`);
+      return hpT(lang, `ed_${s.name}`);
     };
     this._form.computeHelper = (s) => {
-      var key = 'ed_' + s.name + '_helper';
+      var key = `ed_${s.name}_helper`;
       var txt = hpT(lang, key);
       return txt === key ? undefined : txt;
     };
@@ -861,15 +845,15 @@ class HpPrinterCardEditor extends HTMLElement {
     ev.stopPropagation();
     var value = Object.assign({}, ev.detail.value);
     // Keep the YAML short: drop options left empty or at their default.
-    Object.keys(value).forEach(function (key) {
+    Object.keys(value).forEach((key) => {
       if (value[key] === '' || value[key] === null || value[key] === undefined) delete value[key];
     });
-    Object.keys(HP_DEFAULTS).forEach(function (key) {
+    Object.keys(HP_DEFAULTS).forEach((key) => {
       if (value[key] === HP_DEFAULTS[key]) delete value[key];
     });
     if (value.entities) {
       var e = Object.assign({}, value.entities);
-      Object.keys(e).forEach(function (k) { if (!e[k]) delete e[k]; });
+      Object.keys(e).forEach((k) => { if (!e[k]) delete e[k]; });
       if (Object.keys(e).length) value.entities = e; else delete value.entities;
     }
     if (this._config.type) value = Object.assign({ type: this._config.type }, value);
@@ -894,4 +878,4 @@ if (!customElements.get('hp-printer-card')) {
   });
 }
 
-console.info('%c HP-PRINTER-CARD %c v' + HP_PRINTER_CARD_VERSION + ' ', 'color:#fff;background:#0096d6;font-weight:700', 'color:#0096d6;background:#fff');
+console.info(`%c HP-PRINTER-CARD %c v${HP_PRINTER_CARD_VERSION} `, 'color:#fff;background:#0096d6;font-weight:700', 'color:#0096d6;background:#fff');

@@ -125,8 +125,8 @@ add("hp", "sensor.officejet_status", "ready", { options: ["ready", "inpowersave"
 add("hp", "binary_sensor.officejet_eprint", "on", { device_class: "connectivity" });
 add("hp", "sensor.officejet_printer_total_pages", "2148", { unit_of_measurement: "pages" });
 [["black", 50], ["cyan", 50], ["magenta", 50], ["yellow", 12]].forEach(([color, level], i) => {
-  const dev = "ink_" + color;
-  devices[dev] = { id: dev, name: color[0].toUpperCase() + color.slice(1) + " cartridge", via_device_id: "hp", manufacturer: "HP" };
+  const dev = `ink_${color}`;
+  devices[dev] = { id: dev, name: `${color[0].toUpperCase() + color.slice(1)} cartridge`, via_device_id: "hp", manufacturer: "HP" };
   add(dev, `sensor.${color}_cartridge_level`, String(level), { unit_of_measurement: "%" });
   add(dev, `sensor.${color}_cartridge_station`, String(i + 1));
 });

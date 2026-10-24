@@ -175,7 +175,7 @@ function hpEsc(s) {
 }
 
 function hpFill(str, vars) {
-  return String(str).replace(/\{(\w)\}/g, (m, k) => vars[k] != null ? vars[k] : m);
+  return String(str).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : m);
 }
 
 // ── Printer picture ──────────────────────────────────────────────────────────
@@ -222,8 +222,6 @@ var HP_INK_COLORS = {
   tricolor: 'linear-gradient(90deg, #00a6d6 0 33%, #d6197c 33% 66%, #f5c400 66%)',
   ink: '#9e9e9e',
 };
-
-var _HP_INK_SHORT = { black: 'K', cyan: 'C', magenta: 'M', yellow: 'Y', tricolor: 'CMY', ink: '•' };
 
 function hpInkColor(text) {
   var t = String(text || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -682,7 +680,9 @@ class HpPrinterCard extends HTMLElement {
     var imageHtml = '';
     if (c.show_image) {
       var custom = c.image && String(c.image).trim();
-      var admin = (c.admin_url && String(c.admin_url).trim()) || hpAdminUrl(hass, r);
+      // Only http(s) addresses become a link, like the detected configuration URL.
+      var custAdmin = c.admin_url && String(c.admin_url).trim();
+      var admin = (custAdmin && /^https?:\/\//i.test(custAdmin) ? custAdmin : '') || hpAdminUrl(hass, r);
       var picTag = admin ? 'a' : 'div';
       imageHtml = '<' + picTag + ' class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '"' +
         (admin ? ` href="${hpEsc(admin)}" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_admin'))}"` : '') + '>' +
@@ -797,7 +797,7 @@ class HpPrinterCard extends HTMLElement {
       '.chip ha-icon { --mdc-icon-size: 13px; }' +
       '.chip.error { background: color-mix(in srgb, var(--error-color, #db4437) 15%, transparent); color: var(--error-color, #db4437); }' +
       '.chip.warn { background: color-mix(in srgb, var(--warning-color, #ffa600) 15%, transparent); color: var(--warning-color, #ffa600); }' +
-            '.chip.on { background: color-mix(in srgb, var(--info-color, #039be5) 15%, transparent); color: var(--info-color, #039be5); }' +
+      '.chip.on { background: color-mix(in srgb, var(--info-color, #039be5) 15%, transparent); color: var(--info-color, #039be5); }' +
       '.chip.muted { background: var(--secondary-background-color, rgba(128,128,128,0.12)); color: var(--secondary-text-color); }' +
       '.sub { font-size: 11px; color: var(--secondary-text-color); line-height: 1.4; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }' +
       '.sub ha-icon { --mdc-icon-size: 15px; }' +
@@ -846,7 +846,7 @@ class HpPrinterCardEditor extends HTMLElement {
   }
 
   _lang() {
-    var lang = this._hass?.language ? this._hass.language.split('-')[0] : 'en';
+    var lang = ((this._config?.language) || (this._hass?.language) || 'en').split('-')[0];
     return HpI18n[lang] ? lang : 'en';
   }
 
@@ -924,7 +924,10 @@ class HpPrinterCardEditor extends HTMLElement {
       if (Object.keys(e).length) value.entities = e; else delete value.entities;
     }
     if (this._config.type) value = Object.assign({ type: this._config.type }, value);
+    var lang = this._lang();
     this._config = value;
+    // A new language option relabels the form.
+    if (lang !== this._lang()) this._render();
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: value }, bubbles: true, composed: true }));
   }
 }

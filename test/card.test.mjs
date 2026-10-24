@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadCard } from "./load.mjs";
 
-const { HpPrinterCard, hpHpInks, hpEsc } = loadCard("hp-printer-card.js", ["HpPrinterCard", "hpHpInks", "hpEsc"]);
+const { HpPrinterCard, HpPrinterCardEditor, hpHpInks, hpEsc, hpFill } = loadCard("hp-printer-card.js", [
+  "HpPrinterCard",
+  "HpPrinterCardEditor",
+  "hpHpInks",
+  "hpEsc",
+  "hpFill",
+]);
 
 const st = (state, attributes = {}, extra = {}) => ({ state, attributes, ...extra });
 const STATUS_OPTIONS = ["ready", "inpowersave", "processing", "scanprocessing", "stopped"];
@@ -75,6 +81,61 @@ test("discovery is reused until the registry changes", () => {
   assert.notEqual(card._resolve(), first);
 });
 
+// The IPP integration may load after HP Printer: its sensor is missing, then unavailable, then ready.
+function withIpp(hass, ippState) {
+  const out = { ...hass, states: { ...hass.states }, entities: { ...hass.entities }, devices: { ...hass.devices } };
+  out.devices.p = { ...out.devices.p, model: "OfficeJet Pro 9010" };
+  out.devices.ipp_dev = { name: "OfficeJet IPP", model: "OfficeJet Pro 9010" };
+  out.entities["sensor.ipp_printer"] = { entity_id: "sensor.ipp_printer", device_id: "ipp_dev" };
+  if (ippState) out.states["sensor.ipp_printer"] = ippState;
+  return out;
+}
+const IPP_READY = st("idle", { uri_supported: "ipp://printer.local/ipp/print", state_reason: "media-empty-error" });
+
+for (const [label, first] of [["absent", undefined], ["unavailable", st("unavailable", {})]]) {
+  test(`the IPP sensor is found once it becomes ready (${label} on the first render)`, () => {
+    const base = withIpp(mockHass(), first);
+    const card = render(base);
+    assert.equal(card._resolve().ipp, undefined);
+    assert.doesNotMatch(card.shadowRoot.innerHTML, /Paper tray empty/);
+    // Only the IPP state changes: same registry objects.
+    card.hass = { ...base, states: { ...base.states, "sensor.ipp_printer": IPP_READY } };
+    assert.equal(card._resolve().ipp, "sensor.ipp_printer");
+    assert.match(card.shadowRoot.innerHTML, /Paper tray empty/);
+  });
+}
+
+test("a printer without IPP sensor does not redo the whole discovery on each update", () => {
+  const hass = mockHass();
+  const card = render(hass);
+  const first = card._resolve();
+  card._hass = { ...hass, states: { ...hass.states } };
+  assert.equal(card._resolve(), first);
+});
+
 test("hpEsc escapes HTML text and attributes", () => {
   assert.equal(hpEsc(`<"'&>`), "&lt;&quot;&#39;&amp;&gt;");
+});
+
+test("admin_url only becomes a link with an http(s) scheme", () => {
+  const html = (admin_url) => render(mockHass(), { device_id: "p", admin_url }).shadowRoot.innerHTML;
+  assert.match(html("http://printer.local/"), /<a class="pic[^"]*" href="http:\/\/printer\.local\/"/);
+  assert.doesNotMatch(html("javascript:alert(1)"), /javascript:/);
+});
+
+test("hpFill replaces placeholders of any length", () => {
+  assert.equal(hpFill("{n} of {total}", { n: 1, total: 3 }), "1 of 3");
+  assert.equal(hpFill("{missing}", {}), "{missing}");
+});
+
+test("editor labels follow the language option", () => {
+  const label = (config, language = "en") => {
+    const ed = new HpPrinterCardEditor();
+    ed.setConfig(config);
+    ed.hass = { language };
+    return ed._form.computeLabel({ name: "name" });
+  };
+  assert.equal(label({}), "Name");
+  assert.equal(label({ language: "fr" }), "Nom");
+  assert.equal(label({ language: "en" }, "fr"), "Name");
 });

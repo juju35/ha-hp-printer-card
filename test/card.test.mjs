@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadCard } from "./load.mjs";
 
-const { HpPrinterCard, hpHpInks, hpEsc } = loadCard("hp-printer-card.js", ["HpPrinterCard", "hpHpInks", "hpEsc"]);
+const { HpPrinterCard, HpPrinterCardEditor, hpHpInks, hpEsc, hpFill } = loadCard("hp-printer-card.js", [
+  "HpPrinterCard",
+  "HpPrinterCardEditor",
+  "hpHpInks",
+  "hpEsc",
+  "hpFill",
+]);
 
 const st = (state, attributes = {}, extra = {}) => ({ state, attributes, ...extra });
 const STATUS_OPTIONS = ["ready", "inpowersave", "processing", "scanprocessing", "stopped"];
@@ -77,4 +83,27 @@ test("discovery is reused until the registry changes", () => {
 
 test("hpEsc escapes HTML text and attributes", () => {
   assert.equal(hpEsc(`<"'&>`), "&lt;&quot;&#39;&amp;&gt;");
+});
+
+test("admin_url only becomes a link with an http(s) scheme", () => {
+  const html = (admin_url) => render(mockHass(), { device_id: "p", admin_url }).shadowRoot.innerHTML;
+  assert.match(html("http://printer.local/"), /<a class="pic[^"]*" href="http:\/\/printer\.local\/"/);
+  assert.doesNotMatch(html("javascript:alert(1)"), /javascript:/);
+});
+
+test("hpFill replaces placeholders of any length", () => {
+  assert.equal(hpFill("{n} of {total}", { n: 1, total: 3 }), "1 of 3");
+  assert.equal(hpFill("{missing}", {}), "{missing}");
+});
+
+test("editor labels follow the language option", () => {
+  const label = (config, language = "en") => {
+    const ed = new HpPrinterCardEditor();
+    ed.setConfig(config);
+    ed.hass = { language };
+    return ed._form.computeLabel({ name: "name" });
+  };
+  assert.equal(label({}), "Name");
+  assert.equal(label({ language: "fr" }), "Nom");
+  assert.equal(label({ language: "en" }, "fr"), "Name");
 });

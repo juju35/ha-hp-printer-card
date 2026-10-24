@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.1
+
+### Changes
+- README: the `admin_url` example is `http://printer.local` instead of a LAN address.
+
+### Fixes
+- Paper alerts and the admin link show up when the IPP sensor appears after the card is first drawn (IPP loaded after HP Printer, or unavailable at startup), without waiting for a registry change.
+- Lighter updates: the printer and IPP sensor lookups reuse sensor lists cached per registry change instead of walking the whole entity registry.
+
+### Maintenance
+- Screenshot script renders each capture in a fresh page; duplication checks no longer scan the tests. Nothing changes for users.
+
 ## 1.5.0
 
 ### Changes

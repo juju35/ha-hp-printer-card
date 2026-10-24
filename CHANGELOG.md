@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.0
+
+### Changes
+- `admin_url` only becomes a link when it starts with `http://` or `https://`; otherwise the printer's detected address is used.
+- The visual editor follows the card's `language` option.
+
+### Fixes
+- Black ink is listed first again when the slot sensors are missing.
+- While the printer is offline, "Last seen" updates every minute instead of staying frozen; expired cartridges (`show_expired`) are re-checked over time too.
+- A non-numeric total pages value is HTML-escaped.
+- Lighter updates: the printer's entities are no longer looked up in the whole entity registry on every Home Assistant update.
+
+### Maintenance
+- CI hardening: actions pinned by commit SHA, read-only workflow token, monthly Dependabot updates, duplication findings annotated in pull requests.
+- Unit tests (`npm test`) run in CI; dead code removed, `package-lock.json` version synced. Nothing changes for users.
+
 ## 1.4.1
 
 ### Maintenance

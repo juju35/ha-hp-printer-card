@@ -267,9 +267,28 @@ function hpIsIppStatus(s) {
   return a.uri_supported !== undefined || (o.indexOf('idle') >= 0 && o.indexOf('printing') >= 0 && o.indexOf('stopped') >= 0);
 }
 
+// Registry entries grouped by device, built once per `hass.entities` object (it only changes with the registry).
+var hpRegistryIndex = new WeakMap();
+function hpRegistryByDevice(reg) {
+  var index = hpRegistryIndex.get(reg);
+  if (!index) {
+    index = new Map();
+    Object.values(reg).forEach((e) => {
+      if (!e.device_id || e.hidden) return;
+      if (!index.has(e.device_id)) index.set(e.device_id, []);
+      index.get(e.device_id).push(e);
+    });
+    hpRegistryIndex.set(reg, index);
+  }
+  return index;
+}
+
 function hpEntitiesOf(hass, deviceIds) {
   if (!hass?.entities) return [];
-  return Object.values(hass.entities).filter((e) => deviceIds.indexOf(e.device_id) >= 0 && !e.hidden && hass.states[e.entity_id]);
+  var index = hpRegistryByDevice(hass.entities);
+  var out = [];
+  deviceIds.forEach((id) => { (index.get(id) || []).forEach((e) => { if (hass.states[e.entity_id]) out.push(e); }); });
+  return out;
 }
 
 function hpDeviceName(hass, id) {
@@ -343,7 +362,7 @@ function hpHpInks(hass, subIds) {
     var sa = a.station ? Number(hass.states[a.station].state) : NaN;
     var sb = b.station ? Number(hass.states[b.station].state) : NaN;
     if (!Number.isNaN(sa) && !Number.isNaN(sb) && sa !== sb) return sa - sb;
-    return (order[a.color] || 9) - (order[b.color] || 9);
+    return (order[a.color] ?? 9) - (order[b.color] ?? 9);
   });
 }
 
@@ -426,6 +445,17 @@ class HpPrinterCard extends HTMLElement {
     this._update();
   }
 
+  connectedCallback() {
+    // Keeps the time-dependent parts ("Last seen 5 minutes ago", expired cartridges) current:
+    // _update() only re-renders when they actually change.
+    clearInterval(this._timer);
+    this._timer = setInterval(() => this._update(), 60000);
+  }
+
+  disconnectedCallback() {
+    clearInterval(this._timer);
+  }
+
   getCardSize() { return 5; }
 
   getGridOptions() { return { columns: 12, min_columns: 6 }; }
@@ -438,7 +468,27 @@ class HpPrinterCard extends HTMLElement {
 
   _t(k, vars) { var s = hpT(this._lang(), k); return vars ? hpFill(s, vars) : s; }
 
+  // Discovery is reused until the registry, the config or the availability of the printer's
+  // entities changes (an entity coming back online brings the attributes discovery relies on).
+  // An incomplete result (states not loaded yet) is searched again on the next update.
   _resolve() {
+    var hass = this._hass, m = this._memo;
+    if (m && m.entities === hass.entities && m.devices === hass.devices && m.config === this._config &&
+      m.avail === this._availSig(m.devs)) return m.r;
+    var r = this._discover();
+    var devs = [r.deviceId].concat(r.kind === 'hp' ? hpSubDevices(hass, r.deviceId) : []);
+    this._memo = r.status && hass.states[r.status]
+      ? { entities: hass.entities, devices: hass.devices, config: this._config, devs: devs, avail: this._availSig(devs), r: r }
+      : null;
+    return r;
+  }
+
+  _availSig(devs) {
+    var hass = this._hass;
+    return hpEntitiesOf(hass, devs).map((e) => (hass.states[e.entity_id].state === 'unavailable' ? 0 : 1)).join('');
+  }
+
+  _discover() {
     var hass = this._hass, c = this._config, over = c.entities || {};
     var deviceId = c.device_id;
     if (!deviceId && c.entity && hass.entities?.[c.entity]) deviceId = hass.entities[c.entity].device_id;
@@ -484,11 +534,28 @@ class HpPrinterCard extends HTMLElement {
     return ids.filter(Boolean);
   }
 
+  // What the card shows that changes with time alone: the "last seen" text and the expired cartridges.
+  _timeSig(r) {
+    var st = this._hass.states[r.status];
+    var out = [];
+    if (this._state(r) === 'offline' && st?.last_changed) {
+      var since = new Date(st.last_changed);
+      if (!Number.isNaN(since.getTime())) out.push(st.last_changed, this._relative(since));
+    }
+    if (this._config.show_expired) {
+      r.inks.forEach((ink) => {
+        var d = ink.expiry && this._avail(ink.expiry) ? new Date(this._val(ink.expiry)).getTime() : NaN;
+        out.push(!Number.isNaN(d) && d < Date.now());
+      });
+    }
+    return out;
+  }
+
   _update() {
     if (!this._config || !this._hass || !this.shadowRoot) return;
     var r = this._resolve();
     var hass = this._hass;
-    var sig = JSON.stringify([this._lang(), this._config, r.deviceId, this._ids(r).map((id) => {
+    var sig = JSON.stringify([this._lang(), this._config, r.deviceId, this._timeSig(r), this._ids(r).map((id) => {
       var s = hass.states[id];
       return s ? [id, s.state, s.attributes.state, s.attributes.state_reason, s.attributes.state_message] : null;
     })]);
@@ -648,7 +715,7 @@ class HpPrinterCard extends HTMLElement {
     } else if (c.show_stats && this._avail(r.total_pages)) {
       var n = Number(this._val(r.total_pages));
       sub = '<div class="sub muted"><ha-icon icon="mdi:file-document-multiple-outline"></ha-icon>' +
-        this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) }) + '</div>';
+        hpEsc(this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) })) + '</div>';
     }
 
     var logoHtml = c.show_logo

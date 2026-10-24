@@ -92,7 +92,7 @@ show_stats: true
 show_eprint: true
 show_expired: false
 low_threshold: 15
-admin_url: http://192.168.1.20
+admin_url: http://printer.local
 image: /local/my-printer.png
 language: en
 entities:
@@ -118,7 +118,7 @@ entities:
 | `show_eprint` | ❌ | `true` | Show the ePrint status (HP Printer integration only) |
 | `show_expired` | ❌ | `false` | Also alert when a cartridge's warranty date has passed |
 | `low_threshold` | ❌ | `15` | Ink level (%) at or below which a cartridge is flagged as low; at 5 % or less it is nearly empty |
-| `admin_url` | ❌ | Detected | Page opened when clicking the printer picture, e.g. `http://192.168.1.20`. By default, the device's configuration URL or the address of its IPP sensor |
+| `admin_url` | ❌ | Detected | Page opened when clicking the printer picture, e.g. `http://printer.local`. By default, the device's configuration URL or the address of its IPP sensor |
 | `image` | ❌ | Bundled picture | URL of your own printer picture, e.g. `/local/printer.png` |
 | `language` | ❌ | Auto | Force language: `fr` or `en` (auto-detects from HA settings) |
 | `entities` | ❌ | Auto | Override detected entities (see below) |

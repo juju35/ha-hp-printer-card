@@ -81,6 +81,38 @@ test("discovery is reused until the registry changes", () => {
   assert.notEqual(card._resolve(), first);
 });
 
+// The IPP integration may load after HP Printer: its sensor is missing, then unavailable, then ready.
+function withIpp(hass, ippState) {
+  const out = { ...hass, states: { ...hass.states }, entities: { ...hass.entities }, devices: { ...hass.devices } };
+  out.devices.p = { ...out.devices.p, model: "OfficeJet Pro 9010" };
+  out.devices.ipp_dev = { name: "OfficeJet IPP", model: "OfficeJet Pro 9010" };
+  out.entities["sensor.ipp_printer"] = { entity_id: "sensor.ipp_printer", device_id: "ipp_dev" };
+  if (ippState) out.states["sensor.ipp_printer"] = ippState;
+  return out;
+}
+const IPP_READY = st("idle", { uri_supported: "ipp://printer.local/ipp/print", state_reason: "media-empty-error" });
+
+for (const [label, first] of [["absent", undefined], ["unavailable", st("unavailable", {})]]) {
+  test(`the IPP sensor is found once it becomes ready (${label} on the first render)`, () => {
+    const base = withIpp(mockHass(), first);
+    const card = render(base);
+    assert.equal(card._resolve().ipp, undefined);
+    assert.doesNotMatch(card.shadowRoot.innerHTML, /Paper tray empty/);
+    // Only the IPP state changes: same registry objects.
+    card.hass = { ...base, states: { ...base.states, "sensor.ipp_printer": IPP_READY } };
+    assert.equal(card._resolve().ipp, "sensor.ipp_printer");
+    assert.match(card.shadowRoot.innerHTML, /Paper tray empty/);
+  });
+}
+
+test("a printer without IPP sensor does not redo the whole discovery on each update", () => {
+  const hass = mockHass();
+  const card = render(hass);
+  const first = card._resolve();
+  card._hass = { ...hass, states: { ...hass.states } };
+  assert.equal(card._resolve(), first);
+});
+
 test("hpEsc escapes HTML text and attributes", () => {
   assert.equal(hpEsc(`<"'&>`), "&lt;&quot;&#39;&amp;&gt;");
 });

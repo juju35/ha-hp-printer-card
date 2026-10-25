@@ -200,10 +200,9 @@ test("an HP printer through IPP only keeps the HP logo", () => {
   assert.match(html, /art-laserjet/);
 });
 
-test("the picture follows the model: OfficeJet Pro 9012 keeps its photo", () => {
+test("the picture follows the model", () => {
   const pic = (model, manufacturer = "HP", kind = "hp") => hpPictureFor({ manufacturer, model }, kind);
-  assert.equal(pic("OfficeJet Pro 9010 series"), "officejet_pro_9010");
-  assert.equal(pic("HP OfficeJet Pro 9012"), "officejet_pro_9010");
+  assert.equal(pic("HP OfficeJet Pro 9012"), "officejet");
   assert.equal(pic("OfficeJet Pro 8020"), "officejet");
   assert.equal(pic("Color LaserJet Pro MFP M479fdw"), "laserjet");
   assert.equal(pic("DeskJet 2720e"), "deskjet");
@@ -219,13 +218,6 @@ test("the picture option overrides detection, and a custom image overrides both"
   assert.doesNotMatch(custom, /class="art/);
 });
 
-test("the HP OfficeJet Pro 9010 series shows the photo with its lit panel", () => {
-  const hass = mockHass();
-  hass.devices.p = { ...hass.devices.p, model: "OfficeJet Pro 9012" };
-  const html = render(hass).shadowRoot.innerHTML;
-  assert.match(html, /<img src="data:image\/webp/);
-  assert.match(html, /<svg class="overlay"/);
-});
 
 test("both card names are registered, the former one as an alias", () => {
   assert.equal(customElements.get("printer-card"), PrinterCard);

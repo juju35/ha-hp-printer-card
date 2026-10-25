@@ -7,9 +7,10 @@
 
 ### New
 - Any IPP printer (Brother, Canon, Epson…): status, ink or toner levels and paper / cover alerts through the IPP integration. *Toner levels* title for laser cartridges.
-- `picture` option, in the visual editor too: the photo of the HP OfficeJet Pro 9010 series (9010, 9012…), drawings for the HP OfficeJet, LaserJet, DeskJet / ENVY and Smart Tank ranges, and a generic printer. `auto` (default) picks it from the device model; their control panel lights up in the status color.
+- `picture` option, in the visual editor too: drawings for the HP OfficeJet, LaserJet, DeskJet / ENVY and Smart Tank ranges, and a generic printer. `auto` (default) picks it from the device model; their control panel lights up in the status color.
 
 ### Changes
+- The bundled HP OfficeJet Pro 9010 photo is removed: the OfficeJet drawing replaces it (set `image` to use a photo of your own).
 - The HP logo only shows for HP printers; "No printer found" instead of "No HP printer found".
 
 ## 1.5.2

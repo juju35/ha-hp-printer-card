@@ -26,7 +26,7 @@ Pick the printer, the card finds all its entities by itself.
 - **Status** with color: ready, sleeping, printing, scanning, copying, cancelling, stopped. The printer's control panel lights up in the status color and pulses while it works
 - **Ink or toner levels**: one tank per cartridge, in the printer's slot order, with a warning below a configurable threshold
 - **Any IPP printer**: status, ink or toner levels and paper / cover alerts for printers of any brand through the IPP integration
-- **Pictures**: the photo of the HP OfficeJet Pro 9010 series (9010, 9012, 9015…), a drawing per HP range (OfficeJet, LaserJet, DeskJet / ENVY, Smart Tank) and a generic printer for the other brands, picked from the device model or chosen in the editor
+- **Pictures**: a drawing per HP range (OfficeJet, LaserJet, DeskJet / ENVY, Smart Tank) and a generic printer for the other brands, picked from the device model or chosen in the editor
 - **Alerts**: low or nearly empty ink, missing / used / non-HP / damaged cartridge, printhead problem, and, through the IPP integration, empty paper tray, paper jam, open cover…
 - **ePrint status**: on, off or not registered (HP cloud printing)
 - Page counter
@@ -124,7 +124,7 @@ entities:
 | `show_expired` | ❌ | `false` | Also alert when a cartridge's warranty date has passed |
 | `low_threshold` | ❌ | `15` | Ink level (%) at or below which a cartridge is flagged as low; at 5 % or less it is nearly empty |
 | `admin_url` | ❌ | Detected | Page opened when clicking the printer picture, e.g. `http://printer.local`. By default, the device's configuration URL or the address of its IPP sensor |
-| `picture` | ❌ | `auto` | Picture: `auto`, `officejet_pro_9010` (photo), `officejet`, `laserjet`, `deskjet`, `smart_tank` or `generic` (see below) |
+| `picture` | ❌ | `auto` | Picture: `auto`, `officejet`, `laserjet`, `deskjet`, `smart_tank` or `generic` (see below) |
 | `image` | ❌ | — | URL of your own printer picture, e.g. `/local/printer.png`; replaces `picture` |
 | `language` | ❌ | Auto | Force language: `fr` or `en` (auto-detects from HA settings) |
 | `entities` | ❌ | Auto | Override detected entities (see below) |
@@ -147,7 +147,6 @@ Cartridges are always found from the printer's devices.
 
 | `picture` | Used by `auto` for |
 |---|---|
-| `officejet_pro_9010` | HP OfficeJet Pro 9010 series (9010, 9012, 9015, 9020…): photo |
 | `officejet` | Other HP models (OfficeJet, PageWide…): all-in-one drawing |
 | `laserjet` | HP LaserJet, Neverstop |
 | `deskjet` | HP DeskJet, ENVY, Tango |
@@ -168,7 +167,7 @@ The HP Printer integration creates one device per part of the printer (each cart
 
 With the IPP integration only (any brand), the card reads the printer sensor of the IPP device for the status and the `printer-state-reasons` alerts, and its marker sensors for the ink or toner levels. The HP logo and the ePrint chip are only shown for HP printers.
 
-Set `image` to use a photo of your own model (the lit control panel is only drawn on the bundled pictures).
+Set `image` to use a photo of your own model (the lit control panel is only drawn on the bundled drawings).
 
 ## Development
 

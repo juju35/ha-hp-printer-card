@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.2
+
+### Fixes
+- Keyboard focus stays on the printer picture (admin page link) or the HP logo when the card updates, instead of being lost on every status change.
+
+### Maintenance
+- The duplication check runs on Node 22 like the other CI jobs; regression tests for the focus fix. Nothing changes for users.
+
 ## 1.5.1
 
 ### Changes

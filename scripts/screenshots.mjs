@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const cardJs = readFileSync(`${root}dist/hp-printer-card.js`, "utf8");
+const cardJs = readFileSync(`${root}dist/printer-card.js`, "utf8");
 
 const THEMES = {
   light: {
@@ -134,6 +134,17 @@ add("hp", "sensor.officejet_printer_total_pages", "2148", { unit_of_measurement:
 });
 add("ipp", "sensor.officejet_ipp", "idle", { uri_supported: "ipp://192.168.1.30/ipp/print", options: ["idle", "printing", "stopped"], state_reason: "media-empty-error" });
 
+// Mock IPP-only printer of another brand (laser, one toner cartridge): generic picture, no HP logo.
+const ipp = { states: { ...states }, entities: { ...entities },
+  devices: { ...devices, laser: { id: "laser", name: "Office laser printer", manufacturer: "Brother", model: "HL-L2350DW" } } };
+for (const [id, state, attributes] of [
+  ["sensor.laser_printer", "printing", { uri_supported: "ipp://192.168.1.31/ipp/print", options: ["idle", "printing", "stopped"], state_reason: "none" }],
+  ["sensor.laser_black_toner", "64", { unit_of_measurement: "%", marker_type: "toner-cartridge", friendly_name: "Black toner" }],
+]) {
+  ipp.entities[id] = { entity_id: id, device_id: "laser" };
+  ipp.states[id] = { entity_id: id, state, last_changed: new Date().toISOString(), attributes };
+}
+
 const hass = { states, entities, devices };
 const offline = structuredClone(states);
 offline["sensor.officejet_status"].state = "unavailable";
@@ -141,9 +152,10 @@ offline["sensor.officejet_ipp"].state = "unavailable";
 
 await render(
   [
-    { file: "card", type: "hp-printer-card", theme: "light", width: 460, config: {} },
-    { file: "card-dark", type: "hp-printer-card", theme: "dark", width: 460, config: { language: "fr" } },
-    { file: "offline", type: "hp-printer-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
+    { file: "card", type: "printer-card", theme: "light", width: 460, config: {} },
+    { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: { language: "fr" } },
+    { file: "offline", type: "printer-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
+    { file: "ipp", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
   ],
   { icons, hass }
 );

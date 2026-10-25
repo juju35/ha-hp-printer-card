@@ -1,7 +1,7 @@
 {
-  "name": "HP Printer Card",
+  "name": "Printer Card",
   "render_readme": true,
   "content_in_root": false,
-  "filename": "hp-printer-card.js",
+  "filename": "printer-card.js",
   "homeassistant": "2024.8.0"
 }

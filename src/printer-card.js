@@ -220,7 +220,7 @@ var HP_ART = {
     '<path d="M38 28L50 12H128L138 28z" fill="url(#pc-dark)"/>' +
     '<rect x="16" y="26" width="128" height="16" rx="5" fill="url(#pc-dark)"/>' +
     '<rect x="16" y="40" width="128" height="62" rx="8" fill="url(#pc-body)" stroke="#b5bcc6"/>' +
-    '<path d="M26 52l38-5v18l-38 5z" fill="#23272e"/><path class="screen" d="M29 54l32-4.2v12.4l-32 4.2z"/>' +
+    '<rect x="26" y="49" width="38" height="18" rx="3" fill="#23272e"/><rect class="screen" x="29" y="52" width="32" height="12" rx="2"/>' +
     '<rect x="36" y="78" width="88" height="7" rx="3.5" fill="url(#pc-dark)"/>' +
     '<path d="M44 82h72l5 15H39z" fill="url(#pc-paper)" stroke="#c3c9d1"/>' +
     '<path d="M17 96h126" stroke="#aab2bc"/>',

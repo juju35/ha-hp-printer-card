@@ -94,6 +94,8 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
 
 const icons = {
   "alert": "M13 14H11V9H13M13 18H11V16H13M1 21H23L12 2L1 21Z",
+  "arrow-collapse": "M19.5,3.09L15,7.59V4H13V11H20V9H16.41L20.91,4.5L19.5,3.09M4,13V15H7.59L3.09,19.5L4.5,20.91L9,16.41V20H11V13H4Z",
+  "arrow-expand": "M10,21V19H6.41L10.91,14.5L9.5,13.09L5,17.59V14H3V21H10M14.5,10.91L19,6.41V10H21V3H14V5H17.59L13.09,9.5L14.5,10.91Z",
   "alert-circle": "M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",
   "calendar-alert": "M6 1V3H5C3.89 3 3 3.89 3 5V19C3 20.11 3.9 21 5 21H19C20.11 21 21 20.11 21 19V5C21 3.9 20.11 3 19 3H18V1H16V3H8V1H6M5 8H19V19H5V8M11 9V14H13V9H11M11 16V18H13V16H11Z",
   "cancel": "M12 2C17.5 2 22 6.5 22 12S17.5 22 12 22 2 17.5 2 12 6.5 2 12 2M12 4C10.1 4 8.4 4.6 7.1 5.7L18.3 16.9C19.3 15.5 20 13.8 20 12C20 7.6 16.4 4 12 4M16.9 18.3L5.7 7.1C4.6 8.4 4 10.1 4 12C4 16.4 7.6 20 12 20C13.9 20 15.6 19.4 16.9 18.3Z",
@@ -150,12 +152,27 @@ const offline = structuredClone(states);
 offline["sensor.officejet_status"].state = "unavailable";
 offline["sensor.officejet_ipp"].state = "unavailable";
 
+// Opens the mini card's full view with a mouse click (detail: 1), so no keyboard focus ring shows.
+const zoomIn = (page) =>
+  page.evaluate(() =>
+    document
+      .querySelector("printer-mini-card")
+      .shadowRoot.querySelector(".zoom")
+      .dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 })),
+  );
+
 await render(
   [
     { file: "card", type: "printer-card", theme: "light", width: 460, config: {} },
     { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: { language: "fr" } },
     { file: "offline", type: "printer-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
     { file: "ipp", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
+    { file: "mini-card", type: "printer-mini-card", theme: "light", width: 460, config: {} },
+    { file: "mini-card-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" } },
+    { file: "mini-offline", type: "printer-mini-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
+    { file: "mini-offline-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, hass: { states: offline } },
+    { file: "mini-zoom", type: "printer-mini-card", theme: "light", width: 460, config: {}, after: zoomIn },
+    { file: "mini-zoom-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, after: zoomIn },
   ],
   { icons, hass }
 );

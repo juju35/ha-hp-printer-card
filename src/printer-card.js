@@ -91,6 +91,10 @@ var HpI18n = {
     ep_on: 'ePrint activé',
     ep_off: 'ePrint désactivé',
     ep_unregistered: 'ePrint non enregistré',
+    ed_zoom: 'Bouton de détail',
+    ed_zoom_helper: 'En haut à droite : affiche la carte complète, un clic ailleurs revient à la vue compacte',
+    zoom_in: 'Afficher la carte complète',
+    zoom_out: 'Revenir à la vue compacte',
   },
   en: {
     printer: 'Printer',
@@ -180,6 +184,10 @@ var HpI18n = {
     ep_on: 'ePrint on',
     ep_off: 'ePrint off',
     ep_unregistered: 'ePrint not registered',
+    ed_zoom: 'Detail button',
+    ed_zoom_helper: 'Top right: shows the full card, a click anywhere else goes back to the compact view',
+    zoom_in: 'Show the full card',
+    zoom_out: 'Back to the compact view',
   },
 };
 
@@ -190,6 +198,11 @@ function hpT(lang, key) {
 
 function hpEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function hpCap(s) {
+  var t = String(s);
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function hpFill(str, vars) {
@@ -526,6 +539,11 @@ var HP_LOGO = '<svg viewBox="0 0 1280 1280" aria-hidden="true"><defs><clipPath i
   '<path d="M485-20H619L482 360H597Q645 360 670 393Q695 427 676 477L515 918H380L552 444H451L277 918H142L349 360Z"/>' +
   '<path fill-rule="evenodd" d="M819 358H1070Q1118 358 1143 391Q1168 424 1151 470L1009 866Q1000 890 977 905Q956 918 932 918H752L614 1300H485ZM924 441H1026L883 832H781Z"/></g></svg>';
 
+// A click inside a dialog (more-info opened from the card, say) is not a click outside the card.
+function hpInDialog(ev) {
+  return ev.composedPath().some((n) => ['ha-more-info-dialog', 'ha-dialog', 'dialog'].indexOf(n.localName) >= 0);
+}
+
 // ── Card ─────────────────────────────────────────────────────────────────────
 // The card's focusable links, by the class that identifies each across renders.
 var HP_FOCUSABLE = ['pic', 'logo'];
@@ -538,6 +556,8 @@ var HP_DEFAULTS = {
 };
 
 class PrinterCard extends HTMLElement {
+  static defaults = HP_DEFAULTS;
+
   static getConfigElement() {
     return document.createElement('printer-card-editor');
   }
@@ -549,7 +569,7 @@ class PrinterCard extends HTMLElement {
 
   setConfig(config) {
     if (!config) throw new Error('Invalid configuration');
-    this._config = Object.assign({}, HP_DEFAULTS, config);
+    this._config = Object.assign({}, this.constructor.defaults, config);
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._sig = null;
     this._update();
@@ -723,7 +743,8 @@ class PrinterCard extends HTMLElement {
       if (!ink.printhead) {
         var p = this._num(ink.level);
         if (!Number.isNaN(p) && p <= low) {
-          out.push({ level: p <= critical ? 'error' : 'warn', icon: 'mdi:water-alert',
+          // `ink`: shown by the cartridge itself (tank or chip), not repeated as a chip in the mini card.
+          out.push({ level: p <= critical ? 'error' : 'warn', icon: 'mdi:water-alert', ink: true,
             text: this._t(p <= critical ? 'al_empty' : 'al_low', { c: label, p: Math.round(p) }) });
         }
       }
@@ -797,36 +818,95 @@ class PrinterCard extends HTMLElement {
     return `<svg class="art art-${pic}" viewBox="0 0 160 120" aria-hidden="true">${HP_ART_DEFS}${HP_ART[pic]}</svg>`;
   }
 
-  _render(r) {
+  // What both cards show: name, state and its color, alerts, picture and HP logo.
+  _view(r) {
     var c = this._config, hass = this._hass;
     var deviceName = hpDeviceName(hass, r.deviceId);
-    var name = c.name || deviceName.replace(/\s*\([\d.]+\)\s*$/, '') || this._t('printer');
-
-    if (!r.deviceId || !r.status) {
-      this.shadowRoot.innerHTML = `${this._styles()}<ha-card><div class="empty"><ha-icon icon="mdi:printer-off"></ha-icon>${this._t('no_device')}</div></ha-card>`;
-      return;
-    }
-
     var state = this._state(r);
     var offline = state === 'offline';
-    var color = offline ? 'var(--disabled-text-color, #9e9e9e)' : (HP_STATE_COLORS[state] || 'var(--secondary-text-color)');
-    var statusText = this._t(`st_${state}`);
-    var alerts = offline ? [] : this._alerts(r, state);
+    var v = {
+      name: c.name || deviceName.replace(/\s*\([\d.]+\)\s*$/, '') || this._t('printer'),
+      state: state,
+      offline: offline,
+      color: offline ? 'var(--disabled-text-color, #9e9e9e)' : (HP_STATE_COLORS[state] || 'var(--secondary-text-color)'),
+      alerts: offline ? [] : this._alerts(r, state),
+      imageHtml: '',
+      // No HP logo next to the generic printer, even for an HP device.
+      logoHtml: c.show_logo && r.isHp && this._pictureKey(r) !== 'generic'
+        ? `<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_hp'))}">${HP_LOGO}</a>`
+        : '',
+    };
 
     // Picture, with the control panel lit in the status color.
     // Clicking it opens the printer's web admin page, when its address is known.
-    var imageHtml = '';
     if (c.show_image) {
       var custom = c.image && String(c.image).trim();
       // Only http(s) addresses become a link, like the detected configuration URL.
       var custAdmin = c.admin_url && String(c.admin_url).trim();
       var admin = (custAdmin && /^https?:\/\//i.test(custAdmin) ? custAdmin : '') || hpAdminUrl(hass, r);
       var picTag = admin ? 'a' : 'div';
-      imageHtml = '<' + picTag + ' class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '"' +
+      v.imageHtml = '<' + picTag + ' class="pic' + (offline ? ' off' : '') + (HP_BUSY.indexOf(state) >= 0 ? ' busy' : '') + '"' +
         (admin ? ` href="${hpEsc(admin)}" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_admin'))}"` : '') + '>' +
         this._picture(r, custom) +
       '</' + picTag + '>';
     }
+    return v;
+  }
+
+  _statusPill(v) {
+    return '<div class="status"><ha-icon icon="' + (HP_STATE_ICONS[v.state] || 'mdi:printer') + '"></ha-icon><span>' +
+      hpEsc(this._t(`st_${v.state}`)) + '</span></div>';
+  }
+
+  // "Last seen 5 minutes ago" while the printer is offline, '' when unknown.
+  _lastSeen(r) {
+    var st = this._hass.states[r.status];
+    var since = st?.last_changed ? new Date(st.last_changed) : null;
+    return since && !Number.isNaN(since.getTime()) ? hpEsc(this._t('last_seen', { t: this._relative(since) })) : '';
+  }
+
+  // Level of a cartridge and how it is flagged: low (at or below the threshold), nearly empty, faulty.
+  _inkInfo(ink) {
+    var low = Number(this._config.low_threshold);
+    if (Number.isNaN(low)) low = 15;
+    var p = this._num(ink.level);
+    var known = !Number.isNaN(p);
+    var left = Number(this._val(ink.pages_left));
+    return {
+      p: p,
+      pct: known ? Math.max(0, Math.min(100, p)) : 0,
+      low: known && p <= low,
+      crit: known && p <= Math.min(low, 5),
+      bad: !!ink.status && this._val(ink.status) === 'off' && !hpCartridgeOk(this._hass.states[ink.status]?.attributes.state),
+      title: this._inkLabel(ink) + (known ? ` · ${Math.round(p)} %` : '') +
+        (this._avail(ink.pages_left) && !Number.isNaN(left) ? ` · ${this._t('pages_left', { n: left })}` : ''),
+    };
+  }
+
+  // Extra control at the top right of the header: none here, the mini card's zoom button.
+  _corner() { return ''; }
+
+  _render(r) {
+    if (!r.deviceId || !r.status) {
+      this.shadowRoot.innerHTML = `${this._styles()}<ha-card><div class="empty"><ha-icon icon="mdi:printer-off"></ha-icon>${this._t('no_device')}</div></ha-card>`;
+      return;
+    }
+    var v = this._view(r);
+    this._paint(v, this._full(r, v));
+  }
+
+  _paint(v, inner, cls) {
+    var focused = hpFocusKey(this.shadowRoot.activeElement);
+    var classes = [v.offline ? 'offline' : '', cls || ''].filter(Boolean).join(' ');
+    this.shadowRoot.innerHTML = `${this._styles(v.color)}<ha-card class="${classes}">${inner}</ha-card>`;
+    // innerHTML replaced the focused link: focus its counterpart so keyboard navigation keeps its place.
+    if (focused) this.shadowRoot.querySelector(`a.${focused}`)?.focus({ preventScroll: true });
+  }
+
+  // The full card: header (picture, name, status, chips), ink levels and alerts.
+  _full(r, v) {
+    var c = this._config;
+    var offline = v.offline, alerts = v.alerts;
 
     var chips = [];
     if (!offline && c.show_alerts) {
@@ -845,46 +925,32 @@ class PrinterCard extends HTMLElement {
 
     var sub = '';
     if (offline) {
-      var st = hass.states[r.status];
-      var since = st?.last_changed ? new Date(st.last_changed) : null;
-      sub = '<div class="sub">' + this._t('offline_text') +
-        (since && !Number.isNaN(since.getTime()) ? `<br><span class="muted">${hpEsc(this._t('last_seen', { t: this._relative(since) }))}</span>` : '') + '</div>';
+      var seen = this._lastSeen(r);
+      sub = `<div class="sub">${this._t('offline_text')}${seen ? `<br><span class="muted">${seen}</span>` : ''}</div>`;
     } else if (c.show_stats && this._avail(r.total_pages)) {
       var n = Number(this._val(r.total_pages));
       sub = '<div class="sub muted"><ha-icon icon="mdi:file-document-multiple-outline"></ha-icon>' +
         hpEsc(this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) })) + '</div>';
     }
 
-    // No HP logo next to the generic printer, even for an HP device.
-    var logoHtml = c.show_logo && r.isHp && this._pictureKey(r) !== 'generic'
-      ? `<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_hp'))}">${HP_LOGO}</a>`
-      : '';
-
-    var head = '<div class="head">' + logoHtml + imageHtml +
+    var head = '<div class="head">' + v.logoHtml + v.imageHtml +
       '<div class="meta">' +
-        '<div class="name">' + hpEsc(name) + '</div>' +
-        '<div class="status"><ha-icon icon="' + (HP_STATE_ICONS[state] || 'mdi:printer') + '"></ha-icon><span>' + hpEsc(statusText) + '</span></div>' +
+        '<div class="name">' + hpEsc(v.name) + '</div>' +
+        this._statusPill(v) +
         (chips.length ? `<div class="chips">${chips.join('')}</div>` : '') +
         sub +
-      '</div></div>';
+      '</div>' + this._corner() + '</div>';
 
     var inksHtml = '';
     var cartridges = r.inks.filter((i) => !i.printhead && i.level);
     if (!offline && c.show_inks && cartridges.length) {
-      var low = Number(c.low_threshold);
       inksHtml = '<div class="section"><div class="section-title">' + this._t(cartridges.every((i) => i.toner) ? 'toner' : 'inks') + '</div><div class="inks" style="--n:' + cartridges.length + '">' +
         cartridges.map((ink) => {
-          var p = this._num(ink.level);
-          var pct = Number.isNaN(p) ? 0 : Math.max(0, Math.min(100, p));
-          var bad = ink.status && this._val(ink.status) === 'off' && !hpCartridgeOk(hass.states[ink.status]?.attributes.state);
-          var isLow = !Number.isNaN(p) && p <= (Number.isNaN(low) ? 15 : low);
-          var left = Number(this._val(ink.pages_left));
-          var title = this._inkLabel(ink) + (Number.isNaN(p) ? '' : ` · ${Math.round(p)} %`) +
-            (this._avail(ink.pages_left) && !Number.isNaN(left) ? ` · ${this._t('pages_left', { n: left })}` : '');
-          return '<div class="ink' + (isLow ? ' low' : '') + (!Number.isNaN(p) && p <= Math.min(Number.isNaN(low) ? 15 : low, 5) ? ' crit' : '') + (bad ? ' bad' : '') + '" title="' + hpEsc(title) + '">' +
-            '<div class="tank"><div class="level" style="height:' + pct + '%;background:' + HP_INK_COLORS[ink.color] + '"></div>' +
-              (isLow || bad ? '<ha-icon class="flag" icon="mdi:alert"></ha-icon>' : '') + '</div>' +
-            '<div class="pct">' + (Number.isNaN(p) ? '—' : `${Math.round(p)}<small>%</small>`) + '</div>' +
+          var k = this._inkInfo(ink);
+          return '<div class="ink' + (k.low ? ' low' : '') + (k.crit ? ' crit' : '') + (k.bad ? ' bad' : '') + '" title="' + hpEsc(k.title) + '">' +
+            '<div class="tank"><div class="level" style="height:' + k.pct + '%;background:' + HP_INK_COLORS[ink.color] + '"></div>' +
+              (k.low || k.bad ? '<ha-icon class="flag" icon="mdi:alert"></ha-icon>' : '') + '</div>' +
+            '<div class="pct">' + (Number.isNaN(k.p) ? '—' : `${Math.round(k.p)}<small>%</small>`) + '</div>' +
             '<div class="lbl">' + hpEsc(this._inkLabel(ink)) + '</div>' +
           '</div>';
         }).join('') + '</div></div>';
@@ -894,18 +960,12 @@ class PrinterCard extends HTMLElement {
     if (!offline && c.show_alerts) {
       alertsHtml = '<div class="section"><div class="section-title">' + this._t('alerts') + '</div>' +
         (alerts.length
-          ? `<div class="alerts">${alerts.map((a) => {
-            var txt = String(a.text);
-            return `<div class="alert ${a.level}"><ha-icon icon="${a.icon}"></ha-icon><span>${hpEsc(txt.charAt(0).toUpperCase() + txt.slice(1))}</span></div>`;
-          }).join('')}</div>`
+          ? `<div class="alerts">${alerts.map((a) => `<div class="alert ${a.level}"><ha-icon icon="${a.icon}"></ha-icon><span>${hpEsc(hpCap(a.text))}</span></div>`).join('')}</div>`
           : `<div class="alert ok"><ha-icon icon="mdi:check-circle"></ha-icon><span>${this._t('no_alerts')}</span></div>`) +
       '</div>';
     }
 
-    var focused = hpFocusKey(this.shadowRoot.activeElement);
-    this.shadowRoot.innerHTML = `${this._styles(color)}<ha-card class="${offline ? 'offline' : ''}">${head}${inksHtml}${alertsHtml}</ha-card>`;
-    // innerHTML replaced the focused link: focus its counterpart so keyboard navigation keeps its place.
-    if (focused) this.shadowRoot.querySelector(`a.${focused}`)?.focus({ preventScroll: true });
+    return head + inksHtml + alertsHtml;
   }
 
   _styles(color) {
@@ -969,8 +1029,132 @@ class PrinterCard extends HTMLElement {
   }
 }
 
+// ── printer-mini-card ────────────────────────────────────────────────────────
+// The same printer on two lines: picture, name and status, then one chip per cartridge and per alert.
+// Its detail button (top right, `zoom: false` removes it) switches it to the full card and back;
+// a click anywhere else brings it back too.
+var HP_MINI_STYLES =
+  '.zoom { all: unset; flex: none; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--secondary-text-color); }' +
+  '.zoom ha-icon { --mdc-icon-size: 16px; }' +
+  '.zoom:hover { background: color-mix(in srgb, var(--secondary-text-color) 16%, transparent); color: var(--primary-text-color); }' +
+  '.zoom:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 1px; }' +
+  // Full view: the button takes the top right corner, the HP logo moves to its left.
+  '.head > .zoom { position: absolute; top: -1px; right: -1px; }' +
+  '.head:has(> .zoom) .logo { right: 30px; }' +
+  '.head:has(> .zoom) .meta { padding-right: 30px; }' +
+  '.head:has(> .zoom):has(.logo) .meta { padding-right: 60px; }' +
+  'ha-card.mini { padding: 8px 10px; }' +
+  '.mini { display: flex; align-items: center; gap: 10px; }' +
+  '.mini .pic { width: 44px; flex: none; }' +
+  '.mini .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }' +
+  '.mini .top { display: flex; align-items: center; gap: 6px; min-width: 0; }' +
+  '.mini .logo { position: static; flex: none; width: 16px; height: 16px; }' +
+  '.mini .name { flex: 0 1 auto; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+  '.mini .status { flex: none; margin-left: auto; font-size: 11px; padding: 1px 8px 1px 5px; }' +
+  '.mini .zoom { margin: -4px -4px -4px 0; }' +
+  '.rs { display: flex; flex-wrap: wrap; gap: 4px; margin-left: -5px; }' +
+  '.rs:empty { display: none; }' +
+  '.r { --t: var(--secondary-text-color); display: inline-flex; align-items: center; gap: 4px; padding: 0 7px 0 5px; border-radius: 999px;' +
+    ' font-size: 12px; font-weight: 500; line-height: 18px; white-space: nowrap; color: var(--primary-text-color); }' +
+  '.r ha-icon { --mdc-icon-size: 13px; color: var(--t); }' +
+  '.r .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px var(--divider-color, rgba(128,128,128,0.25)); }' +
+  '.r.warn { --t: var(--warning-color, #ffa600); }' +
+  '.r.error { --t: var(--error-color, #db4437); }' +
+  '.r.warn, .r.error { color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }' +
+  '.r.info { color: var(--secondary-text-color); }' +
+  '.r.seen { color: var(--secondary-text-color); font-weight: 400; padding-left: 0; }';
+
+class PrinterMiniCard extends PrinterCard {
+  static defaults = Object.assign({}, HP_DEFAULTS, { zoom: true });
+
+  static getConfigElement() {
+    return document.createElement('printer-mini-card-editor');
+  }
+
+  constructor() {
+    super();
+    // A click outside the card (and outside a dialog opened from it) brings back the compact view.
+    this._onOutside = (ev) => {
+      if (!this._zoomed || ev.composedPath().includes(this) || hpInDialog(ev)) return;
+      this._zoomed = false;
+      this._sig = null;
+      this._update();
+    };
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('click', this._onOutside, true);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('click', this._onOutside, true);
+  }
+
+  getCardSize() { return this._zoomed ? super.getCardSize() : 2; }
+
+  getGridOptions() { return this._zoomed ? super.getGridOptions() : { columns: 12, min_columns: 4, rows: 'auto' }; }
+
+  _styles(color) {
+    return super._styles(color).replace('</style>', `${HP_MINI_STYLES}</style>`);
+  }
+
+  _corner() {
+    if (this._config.zoom === false) return '';
+    return `<button class="zoom" title="${hpEsc(this._t(this._zoomed ? 'zoom_out' : 'zoom_in'))}"><ha-icon icon="${
+      this._zoomed ? 'mdi:arrow-collapse' : 'mdi:arrow-expand'}"></ha-icon></button>`;
+  }
+
+  _render(r) {
+    if (this._zoomed || !r.deviceId || !r.status) super._render(r);
+    else {
+      var v = this._view(r);
+      this._paint(v, '<div class="mini">' + v.imageHtml + '<div class="body"><div class="top">' + v.logoHtml +
+        '<div class="name">' + hpEsc(v.name) + '</div>' + this._statusPill(v) + this._corner() + '</div>' +
+        '<div class="rs">' + this._chips(r, v) + '</div></div></div>', 'mini');
+    }
+    this.shadowRoot.querySelector('.zoom')?.addEventListener('click', (ev) => this._toggleZoom(ev));
+  }
+
+  // The detail button: full card, or back to the compact view.
+  _toggleZoom(ev) {
+    ev.stopPropagation(); // a click on the button is never a click on the header
+    this._zoomed = !this._zoomed;
+    this._sig = null;
+    this._update();
+    // Keyboard use (Enter / Space: no click count) keeps the focus on the button that replaced this one.
+    if (ev.detail === 0) this.shadowRoot.querySelector('.zoom')?.focus();
+  }
+
+  // One chip per cartridge (dot in its color and level), then one per alert the cartridges do not already show.
+  _chips(r, v) {
+    var c = this._config;
+    if (v.offline) {
+      var seen = this._lastSeen(r);
+      return seen ? `<span class="r seen">${seen}</span>` : '';
+    }
+    var out = [];
+    if (c.show_inks) {
+      r.inks.filter((i) => !i.printhead && i.level).forEach((ink) => {
+        var k = this._inkInfo(ink);
+        out.push('<span class="r' + (k.crit || k.bad ? ' error' : (k.low ? ' warn' : '')) + '" title="' + hpEsc(k.title) + '">' +
+          '<span class="dot" style="background:' + HP_INK_COLORS[ink.color] + '"></span>' + (Number.isNaN(k.p) ? '—' : `${Math.round(k.p)} %`) + '</span>');
+      });
+    }
+    if (c.show_alerts) {
+      v.alerts.filter((a) => !a.ink).forEach((a) => {
+        out.push(`<span class="r ${a.level}"><ha-icon icon="${a.icon}"></ha-icon>${hpEsc(hpCap(a.text))}</span>`);
+      });
+    }
+    return out.join('');
+  }
+}
+
 // ── printer-card-editor (visual editor, built on HA's ha-form) ───────────────
 class PrinterCardEditor extends HTMLElement {
+  static defaults = HP_DEFAULTS;
+
   setConfig(config) {
     this._config = Object.assign({}, config);
     this._render();
@@ -1050,7 +1234,7 @@ class PrinterCardEditor extends HTMLElement {
       var txt = hpT(lang, key);
       return txt === key ? undefined : txt;
     };
-    this._form.data = Object.assign({}, HP_DEFAULTS, this._config);
+    this._form.data = Object.assign({}, this.constructor.defaults, this._config);
   }
 
   _valueChanged(ev) {
@@ -1060,8 +1244,9 @@ class PrinterCardEditor extends HTMLElement {
     Object.keys(value).forEach((key) => {
       if (value[key] === '' || value[key] === null || value[key] === undefined) delete value[key];
     });
-    Object.keys(HP_DEFAULTS).forEach((key) => {
-      if (value[key] === HP_DEFAULTS[key]) delete value[key];
+    var defaults = this.constructor.defaults;
+    Object.keys(defaults).forEach((key) => {
+      if (value[key] === defaults[key]) delete value[key];
     });
     if (value.entities) {
       var e = Object.assign({}, value.entities);
@@ -1077,8 +1262,22 @@ class PrinterCardEditor extends HTMLElement {
   }
 }
 
+// The mini card's editor: the full card's options (shown once zoomed in) and the detail button.
+class PrinterMiniCardEditor extends PrinterCardEditor {
+  static defaults = PrinterMiniCard.defaults;
+
+  _schema() {
+    var schema = super._schema();
+    schema.splice(2, 0, { name: 'zoom', selector: { boolean: {} } });
+    return schema;
+  }
+}
+
 if (!customElements.get('printer-card-editor')) {
   customElements.define('printer-card-editor', PrinterCardEditor);
+}
+if (!customElements.get('printer-mini-card-editor')) {
+  customElements.define('printer-mini-card-editor', PrinterMiniCardEditor);
 }
 
 window.customCards = window.customCards || [];
@@ -1088,6 +1287,16 @@ if (!customElements.get('printer-card')) {
     type: 'printer-card',
     name: 'Printer Card',
     description: 'Status, ink or toner levels and alerts for printers (HP Printer and IPP integrations)',
+    preview: true,
+    documentationURL: 'https://github.com/juju35/ha-printer-card',
+  });
+}
+if (!customElements.get('printer-mini-card')) {
+  customElements.define('printer-mini-card', PrinterMiniCard);
+  window.customCards.push({
+    type: 'printer-mini-card',
+    name: 'Printer Mini Card',
+    description: 'Compact printer card: status, ink or toner levels and alerts on two lines, with a button showing the full card',
     preview: true,
     documentationURL: 'https://github.com/juju35/ha-printer-card',
   });

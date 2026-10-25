@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadCard } from "./load.mjs";
 
-const { PrinterCard, PrinterCardEditor, hpHpInks, hpEsc, hpFill, hpPictureFor, customElements } = loadCard("printer-card.js", [
+const { PrinterCard, PrinterCardEditor, PrinterMiniCard, PrinterMiniCardEditor, hpHpInks, hpEsc, hpFill, hpPictureFor, customElements, listeners } = loadCard("printer-card.js", [
   "PrinterCard",
   "PrinterCardEditor",
+  "PrinterMiniCard",
+  "PrinterMiniCardEditor",
   "hpPictureFor",
   "hpHpInks",
   "hpEsc",
@@ -34,8 +36,8 @@ function mockHass({ status = "ready", totalPages = "12345", lastChanged } = {}) 
   return { language: "en", states, entities, devices };
 }
 
-function render(hass, config = { device_id: "p" }) {
-  const card = new PrinterCard();
+function render(hass, config = { device_id: "p" }, Card = PrinterCard) {
+  const card = new Card();
   card.setConfig(config);
   card.hass = hass;
   return card;
@@ -229,4 +231,136 @@ test("the card and its editor are registered under their new names only", () => 
   assert.equal(customElements.get("printer-card"), PrinterCard);
   assert.ok(customElements.get("printer-card-editor"));
   assert.equal(customElements.get("hp-printer-card"), undefined);
+  assert.equal(customElements.get("printer-mini-card"), PrinterMiniCard);
+  assert.equal(customElements.get("printer-mini-card-editor"), PrinterMiniCardEditor);
+});
+
+// ── Mini card ────────────────────────────────────────────────────────────────
+const mini = (hass, config = {}) => render(hass, { device_id: "p", ...config }, PrinterMiniCard);
+const levels = (hass, values) => {
+  const states = { ...hass.states };
+  for (const [color, v] of Object.entries(values)) states[`sensor.${color}_level`] = st(String(v), { unit_of_measurement: "%" });
+  return { ...hass, states };
+};
+// Clicks the detail button: the card wires it on each render through shadowRoot.querySelector(".zoom").
+function clickZoom(card, detail = 1) {
+  let onClick;
+  const focused = [];
+  card.shadowRoot.querySelector = (sel) =>
+    sel === ".zoom" ? { addEventListener: (_t, fn) => { onClick = fn; }, focus: () => focused.push(sel) } : null;
+  card._sig = null;
+  card._update();
+  const ev = { detail, stopped: false, stopPropagation() { this.stopped = true; } };
+  onClick(ev);
+  return { ev, focused };
+}
+const documentClick = (path) => {
+  for (const [type, fn, capture] of listeners) if (type === "click" && capture) fn({ composedPath: () => path });
+};
+
+test("the mini card shows the name, the status and one chip per cartridge, tinted when low", () => {
+  const html = mini(levels(mockHass(), { yellow: 3, cyan: 12 })).shadowRoot.innerHTML;
+  assert.match(html, /<ha-card class="mini">/);
+  assert.match(html, /<div class="name">OfficeJet<\/div>/);
+  assert.match(html, /<div class="status">.*Ready/);
+  assert.equal((html.match(/class="dot"/g) || []).length, 4);
+  assert.match(html, /<span class="r error"[^>]*><span class="dot"[^>]*><\/span>3 %/);
+  assert.match(html, /<span class="r warn"[^>]*><span class="dot"[^>]*><\/span>12 %/);
+  assert.match(html, /<span class="r"[^>]*><span class="dot"[^>]*><\/span>50 %/);
+  // Neither the full card's sections nor an ink alert chip repeating the cartridge.
+  assert.doesNotMatch(html, /Ink levels|class="tank"|ink low/);
+});
+
+test("the mini card shows a chip per active alert", () => {
+  const html = mini(withIpp(mockHass(), IPP_READY)).shadowRoot.innerHTML;
+  assert.match(html, /<span class="r error"><ha-icon icon="mdi:paper-roll-outline"><\/ha-icon>Paper tray empty<\/span>/);
+});
+
+test("the mini card says offline, without chips, when the printer is off", () => {
+  const html = mini(mockHass({ status: "unavailable" })).shadowRoot.innerHTML;
+  assert.match(html, /<ha-card class="offline mini">/);
+  assert.match(html, /Offline/);
+  assert.doesNotMatch(html, /class="dot"/);
+});
+
+test("the mini card keeps the HP logo rule of the full card", () => {
+  assert.match(mini(mockHass()).shadowRoot.innerHTML, /class="logo"/);
+  assert.doesNotMatch(mini(mockHass(), { picture: "generic" }).shadowRoot.innerHTML, /class="logo"/);
+});
+
+test("the detail button shows the full card, then the compact view again", () => {
+  const card = mini(mockHass());
+  assert.match(card.shadowRoot.innerHTML, /<button class="zoom" title="Show the full card"><ha-icon icon="mdi:arrow-expand">/);
+  assert.equal(card.getCardSize(), 2);
+  const { ev } = clickZoom(card);
+  assert.equal(ev.stopped, true);
+  const full = card.shadowRoot.innerHTML;
+  // The full card's content: picture, status, ink tanks, alerts, and the button back.
+  assert.match(full, /class="art art-officejet"/);
+  assert.match(full, /Ready/);
+  assert.match(full, /Ink levels/);
+  assert.equal((full.match(/class="tank"/g) || []).length, 4);
+  assert.match(full, /Alerts/);
+  assert.match(full, /12,345 pages printed/);
+  assert.match(full, /<button class="zoom" title="Back to the compact view"><ha-icon icon="mdi:arrow-collapse">/);
+  assert.doesNotMatch(full, /class="mini"/);
+  assert.equal(card.getCardSize(), 5);
+  assert.deepEqual({ ...card.getGridOptions() }, { columns: 12, min_columns: 6 });
+  clickZoom(card);
+  assert.match(card.shadowRoot.innerHTML, /<ha-card class="mini">/);
+  assert.match(card.shadowRoot.innerHTML, /mdi:arrow-expand/);
+});
+
+test("the full view is the same markup as the full card, plus the button", () => {
+  const hass = mockHass();
+  const card = mini(hass);
+  clickZoom(card);
+  const strip = (html) => html.replace(/<button class="zoom"[\s\S]*?<\/button>/, "").replace(/<style>[\s\S]*<\/style>/, "");
+  assert.equal(strip(card.shadowRoot.innerHTML), strip(render(hass).shadowRoot.innerHTML));
+});
+
+test("a keyboard press on the detail button keeps the focus on it", () => {
+  const card = mini(mockHass());
+  assert.deepEqual(clickZoom(card, 0).focused, [".zoom"]);
+  assert.deepEqual(clickZoom(card, 1).focused, []);
+});
+
+test("a click outside the card brings back the compact view, not one inside it or in a dialog", () => {
+  const card = mini(mockHass());
+  card.connectedCallback();
+  try {
+    clickZoom(card);
+    documentClick([{ localName: "div" }, card, { localName: "body" }]);
+    assert.match(card.shadowRoot.innerHTML, /Ink levels/, "inside the card");
+    documentClick([{ localName: "mwc-button" }, { localName: "ha-more-info-dialog" }, { localName: "body" }]);
+    documentClick([{ localName: "dialog" }]);
+    assert.match(card.shadowRoot.innerHTML, /Ink levels/, "in a dialog");
+    documentClick([{ localName: "div" }, { localName: "body" }]);
+    assert.match(card.shadowRoot.innerHTML, /<ha-card class="mini">/, "outside");
+  } finally {
+    card.disconnectedCallback();
+  }
+  assert.equal(listeners.filter(([type]) => type === "click").length, 0, "listener removed");
+});
+
+test("zoom: false removes the detail button", () => {
+  assert.doesNotMatch(mini(mockHass(), { zoom: false }).shadowRoot.innerHTML, /class="zoom"/);
+  assert.doesNotMatch(render(mockHass()).shadowRoot.innerHTML, /class="zoom"/, "never on the full card");
+});
+
+test("the mini card editor offers zoom and keeps it out of the YAML at its default", () => {
+  const ed = new PrinterMiniCardEditor();
+  ed.setConfig({ type: "custom:printer-mini-card" });
+  ed.hass = { language: "fr" };
+  assert.ok(ed._form.schema.some((s) => s.name === "zoom"));
+  assert.equal(ed._form.computeLabel({ name: "zoom" }), "Bouton de détail");
+  assert.ok(ed._form.computeHelper({ name: "zoom" }));
+  assert.equal(ed._form.data.zoom, true);
+  const sent = [];
+  ed.dispatchEvent = (e) => sent.push(e);
+  ed._valueChanged({ stopPropagation() {}, detail: { value: { zoom: true, show_inks: true } } });
+  assert.deepEqual({ ...ed._config }, { type: "custom:printer-mini-card" });
+  ed._valueChanged({ stopPropagation() {}, detail: { value: { zoom: false } } });
+  assert.equal(ed._config.zoom, false);
+  assert.ok(!new PrinterCardEditor()._schema.call({ _lang: () => "en" }).some((s) => s.name === "zoom"));
 });

@@ -12,13 +12,17 @@ Custom Lovelace card for printers in Home Assistant: built for HP printers with 
 
 When the printer is off, the card simply says it's **offline**. Otherwise it shows the **status**, the **ink or toner levels** and the **alerts**.
 
-Pick the printer, the card finds all its entities by itself.
+Pick the printer, the card finds all its entities by itself. A compact **Printer Mini Card** shows the same printer on two lines, and its detail button opens the full card in place.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=juju35&repository=ha-printer-card&category=plugin)
 
 | HP Printer | Dark theme | Offline | IPP printer (any brand) |
 |---|---|---|---|
 | ![Printer card](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/card.png) | ![Printer card, dark theme](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/card-dark.png) | ![Printer card, printer offline](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/offline.png) | ![Printer card, IPP laser printer](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/ipp.png) |
+
+| Printer Mini Card | Mini card, full view (detail button) |
+|---|---|
+| ![Printer mini card](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/mini-card.png) | ![Printer mini card, full view](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/mini-zoom.png) |
 
 ## Features
 
@@ -30,6 +34,8 @@ Pick the printer, the card finds all its entities by itself.
 - **Alerts**: low or nearly empty ink, missing / used / non-HP / damaged cartridge, printhead problem, and, through the IPP integration, empty paper tray, paper jam, open cover…
 - **ePrint status**: on, off or not registered (HP cloud printing)
 - Page counter
+- **Mini card**: picture, name and status on one line, then one chip per cartridge (tinted orange when low, red when nearly empty) and per alert
+- **Detail button** on the mini card (top right): shows the full card in place, with everything it shows; the button, or a click anywhere else, goes back to the compact view. `zoom: false` removes it
 - Automatic entity discovery from the device (works with English or French entity IDs), status, IPP sensor, ePrint sensors and page counter can be overridden
 - Visual editor in the dashboard UI (no YAML needed)
 - English and French, follows the Home Assistant language
@@ -71,7 +77,7 @@ HACS registers the dashboard resource for you.
 
 ### Visual editor
 
-Add the card from the dashboard (**Add card** → **Printer Card**). The first printer found is picked automatically; change it with the **Printer** field, then set the name, the picture, the sections to show and the low ink threshold. The **Entities (advanced)** panel lets you force an entity if auto-detection picks the wrong one. Options left at their default are not written to the YAML.
+Add the card from the dashboard (**Add card** → **Printer Card** or **Printer Mini Card**). The first printer found is picked automatically; change it with the **Printer** field, then set the name, the picture, the sections to show and the low ink threshold. The **Entities (advanced)** panel lets you force an entity if auto-detection picks the wrong one. Options left at their default are not written to the YAML.
 
 ### Minimal
 
@@ -81,6 +87,16 @@ device_id: e1146b5da5cdfee3f4b06c25b0c863a7
 ```
 
 Use either `device_id` (what the visual editor writes) or `entity` (any entity of the printer's main device). With neither, the card uses the first printer it finds.
+
+### Mini card
+
+```yaml
+type: custom:printer-mini-card
+device_id: e1146b5da5cdfee3f4b06c25b0c863a7
+zoom: true
+```
+
+The mini card takes the same options as the full card (they also apply to its full view), plus `zoom`. `show_inks` and `show_alerts` choose its chips; `show_image` and `show_logo` its picture and HP logo.
 
 ### Full options
 
@@ -128,6 +144,7 @@ entities:
 | `image` | ❌ | — | URL of your own printer picture, e.g. `/local/printer.png`; replaces `picture` |
 | `language` | ❌ | Auto | Force language: `fr` or `en` (auto-detects from HA settings) |
 | `entities` | ❌ | Auto | Override detected entities (see below) |
+| `zoom` | ❌ | `true` | Mini card only: detail button in the top right corner, showing the full card; a click on it or anywhere else goes back to the compact view. `false` removes it |
 
 ### Entity overrides
 
@@ -161,6 +178,14 @@ The control panel of each picture lights up in the status color.
 |---|---|---|---|
 | ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) | ![ipp](screenshots/ipp.png) |
 
+Mini card:
+
+| | Light | Dark (French) |
+|---|---|---|
+| Compact | ![mini card](screenshots/mini-card.png) | ![mini card dark](screenshots/mini-card-dark.png) |
+| Offline | ![mini card offline](screenshots/mini-offline.png) | ![mini card offline dark](screenshots/mini-offline-dark.png) |
+| Full view | ![mini card full view](screenshots/mini-zoom.png) | ![mini card full view dark](screenshots/mini-zoom-dark.png) |
+
 ## How it works
 
 The HP Printer integration creates one device per part of the printer (each cartridge, the printhead, the print, scan and copy counters) linked to the main device. The card reads the entity registry to list them, then for each cartridge finds its level, slot, status and warranty date. The printer is shown as **offline** when its status sensor reports `off` (that's what the integration does when the printer stops answering) or is unavailable.
@@ -175,7 +200,7 @@ Set `image` to use a photo of your own model (the lit control panel is only draw
 npm install
 npm run build        # stamps the version of package.json into dist/printer-card.js
 npm run check        # builds and checks the card (run in CI)
-npm run screenshots  # renders the card with mock HP and IPP printers into screenshots/
+npm run screenshots  # renders the cards with mock HP and IPP printers into screenshots/
 ```
 
 `dist/` is not committed: `npm run build` creates it locally, CI builds it on every push, and the release workflow attaches the built file to the release, which is where HACS downloads it from.

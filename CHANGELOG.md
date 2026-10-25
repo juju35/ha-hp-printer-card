@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+### New
+- **Printer Mini Card** (`custom:printer-mini-card`, with its visual editor): picture, name and status on one line, then one chip per cartridge, tinted orange when low and red when nearly empty, and one per alert. *Offline* with the last time the printer was seen when it is off.
+- Detail button on the mini card (top right): shows the full card in place (status, ink levels, alerts, picture); the button, or a click anywhere outside the card, goes back to the compact view. `zoom: false` removes it, in the visual editor too.
+
+### Maintenance
+- The full card's rendering is split into parts the mini card reuses; tests and screenshots for the mini card and its full view. Nothing changes for the full card.
+
 ## 2.0.3
 
 ### Fixes

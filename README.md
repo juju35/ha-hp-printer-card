@@ -132,7 +132,7 @@ entities:
 | `entity` | ❌ | — | Any entity of the printer's main device, used to find the device |
 | `name` | ❌ | Device name | Card title |
 | `show_image` | ❌ | `true` | Show the printer picture |
-| `show_logo` | ❌ | `true` | Show the HP logo in the top right corner (HP printers only, hidden with the `generic` picture); clicking it opens hp.com |
+| `show_logo` | ❌ | `true` | Show the HP logo in the top right corner (HP printers, not with the `generic` picture; clicking it opens hp.com), or a printer icon in its place otherwise |
 | `show_inks` | ❌ | `true` | Show the ink or toner levels |
 | `show_alerts` | ❌ | `true` | Show the alerts |
 | `show_stats` | ❌ | `true` | Show the total page counter |
@@ -190,7 +190,7 @@ Mini card:
 
 The HP Printer integration creates one device per part of the printer (each cartridge, the printhead, the print, scan and copy counters) linked to the main device. The card reads the entity registry to list them, then for each cartridge finds its level, slot, status and warranty date. The printer is shown as **offline** when its status sensor reports `off` (that's what the integration does when the printer stops answering) or is unavailable.
 
-With the IPP integration only (any brand), the card reads the printer sensor of the IPP device for the status and the `printer-state-reasons` alerts, and its marker sensors for the ink or toner levels. The HP logo and the ePrint chip are only shown for HP printers.
+With the IPP integration only (any brand), the card reads the printer sensor of the IPP device for the status and the `printer-state-reasons` alerts, and its marker sensors for the ink or toner levels. The HP logo (replaced by a printer icon) and the ePrint chip are only shown for HP printers.
 
 Set `image` to use a photo of your own model (the lit control panel is only drawn on the bundled drawings).
 

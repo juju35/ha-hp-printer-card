@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+### Changes
+- Mini card: same look as the full card — HP logo in the top right corner, name and status pill stacked, a larger picture, and a small tank per cartridge (filled to its level, outlined orange or red when low) instead of a dot.
+- Without the HP logo (other brands, generic picture), a printer icon takes its place in the corner; `show_logo: false` still removes both.
+
 ## 2.1.0
 
 ### New

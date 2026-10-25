@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+### Fixes
+- OfficeJet drawing: the control panel is straight instead of tilted.
+
 ## 2.0.2
 
 ### Changes

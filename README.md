@@ -8,7 +8,7 @@
 
 Custom Lovelace card for printers in Home Assistant: built for HP printers with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (`hpprinter`), and working with **any IPP printer** (Brother, Canon, Epson, Xerox…) through the core [IPP](https://www.home-assistant.io/integrations/ipp/) integration.
 
-> Formerly `ha-hp-printer-card`. Dashboards using `type: custom:hp-printer-card` keep working; new cards use `type: custom:printer-card`.
+> Formerly `ha-hp-printer-card`: since 2.0.1, cards must use `type: custom:printer-card` (`custom:hp-printer-card` is no longer registered).
 
 When the printer is off, the card simply says it's **offline**. Otherwise it shows the **status**, the **ink or toner levels** and the **alerts**.
 

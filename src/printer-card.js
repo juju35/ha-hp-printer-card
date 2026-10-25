@@ -1086,9 +1086,5 @@ if (!customElements.get('printer-card')) {
     documentationURL: 'https://github.com/juju35/ha-printer-card',
   });
 }
-// Former name: dashboards still using `custom:hp-printer-card` keep working.
-if (!customElements.get('hp-printer-card')) {
-  customElements.define('hp-printer-card', class extends PrinterCard {});
-}
 
 console.info(`%c PRINTER-CARD %c v${PRINTER_CARD_VERSION} `, 'color:#fff;background:#0096d6;font-weight:700', 'color:#0096d6;background:#fff');

@@ -1,12 +1,12 @@
 {
-  "name": "ha-hp-printer-card",
-  "version": "1.5.2",
-  "description": "Lovelace card for HP printers (HP Printer and IPP integrations) in Home Assistant.",
+  "name": "ha-printer-card",
+  "version": "2.0.0",
+  "description": "Lovelace card for printers in Home Assistant: HP Printer integration, and any brand through the IPP integration.",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node scripts/build.mjs && node --check dist/hp-printer-card.js",
+    "check": "node scripts/build.mjs && node --check dist/printer-card.js",
     "screenshots": "node scripts/screenshots.mjs",
     "test": "node --test \"test/*.test.mjs\""
   },

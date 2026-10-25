@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadCard } from "./load.mjs";
 
-const { HpPrinterCard, HpPrinterCardEditor, hpHpInks, hpEsc, hpFill } = loadCard("hp-printer-card.js", [
-  "HpPrinterCard",
-  "HpPrinterCardEditor",
+const { PrinterCard, PrinterCardEditor, hpHpInks, hpEsc, hpFill, hpPictureFor, customElements } = loadCard("printer-card.js", [
+  "PrinterCard",
+  "PrinterCardEditor",
+  "hpPictureFor",
   "hpHpInks",
   "hpEsc",
   "hpFill",
@@ -34,7 +35,7 @@ function mockHass({ status = "ready", totalPages = "12345", lastChanged } = {}) 
 }
 
 function render(hass, config = { device_id: "p" }) {
-  const card = new HpPrinterCard();
+  const card = new PrinterCard();
   card.setConfig(config);
   card.hass = hass;
   return card;
@@ -130,7 +131,7 @@ test("hpFill replaces placeholders of any length", () => {
 
 test("editor labels follow the language option", () => {
   const label = (config, language = "en") => {
-    const ed = new HpPrinterCardEditor();
+    const ed = new PrinterCardEditor();
     ed.setConfig(config);
     ed.hass = { language };
     return ed._form.computeLabel({ name: "name" });
@@ -163,4 +164,71 @@ test("an unfocused card does not take the focus on a re-render", () => {
   card.shadowRoot.querySelector = () => ({ focus: () => { called = true; } });
   card.hass = { ...hass, states: { ...hass.states, "sensor.printer_status": st("processing", { options: STATUS_OPTIONS }) } };
   assert.equal(called, false);
+});
+
+// IPP-only printer of another brand: a printer sensor and one sensor per toner cartridge.
+function ippHass({ state = "idle", reason = "none", manufacturer = "Brother", model = "HL-L2350DW" } = {}) {
+  const states = {
+    "sensor.brother_printer": st(state, { uri_supported: "ipp://brother.local/ipp/print", state_reason: reason, options: ["idle", "printing", "stopped"] }),
+    "sensor.brother_black_toner": st("42", { unit_of_measurement: "%", marker_type: "toner-cartridge", friendly_name: "Black toner" }),
+  };
+  const entities = {
+    "sensor.brother_printer": { entity_id: "sensor.brother_printer", device_id: "b" },
+    "sensor.brother_black_toner": { entity_id: "sensor.brother_black_toner", device_id: "b" },
+  };
+  return { language: "en", states, entities, devices: { b: { name: "Brother HL-L2350DW", manufacturer, model } } };
+}
+
+test("an IPP printer of another brand gets the generic picture, its toner and no HP logo", () => {
+  const html = render(ippHass(), { device_id: "b" }).shadowRoot.innerHTML;
+  assert.match(html, /class="art art-generic"/);
+  assert.match(html, /Toner levels/);
+  assert.match(html, /42<small>%<\/small>/);
+  assert.doesNotMatch(html, /class="logo"/);
+});
+
+test("IPP states and state reasons drive the status and alerts", () => {
+  const html = render(ippHass({ state: "printing", reason: "media-jam-error" }), { device_id: "b" }).shadowRoot.innerHTML;
+  assert.match(html, /Printing/);
+  assert.match(html, /Paper jam/);
+  assert.match(html, /class="pic busy"|class="pic busy /);
+});
+
+test("an HP printer through IPP only keeps the HP logo", () => {
+  const html = render(ippHass({ manufacturer: "HP", model: "LaserJet Pro M404dn" }), { device_id: "b" }).shadowRoot.innerHTML;
+  assert.match(html, /class="logo"/);
+  assert.match(html, /art-laserjet/);
+});
+
+test("the picture follows the model: OfficeJet Pro 9012 keeps its photo", () => {
+  const pic = (model, manufacturer = "HP", kind = "hp") => hpPictureFor({ manufacturer, model }, kind);
+  assert.equal(pic("OfficeJet Pro 9010 series"), "officejet_pro_9010");
+  assert.equal(pic("HP OfficeJet Pro 9012"), "officejet_pro_9010");
+  assert.equal(pic("OfficeJet Pro 8020"), "officejet");
+  assert.equal(pic("Color LaserJet Pro MFP M479fdw"), "laserjet");
+  assert.equal(pic("DeskJet 2720e"), "deskjet");
+  assert.equal(pic("Smart Tank 7305"), "smart_tank");
+  assert.equal(pic("ET-2850", "EPSON", "ipp"), "generic");
+});
+
+test("the picture option overrides detection, and a custom image overrides both", () => {
+  const hass = mockHass();
+  assert.match(render(hass, { device_id: "p", picture: "generic" }).shadowRoot.innerHTML, /art-generic/);
+  const custom = render(hass, { device_id: "p", picture: "generic", image: "/local/p.png" }).shadowRoot.innerHTML;
+  assert.match(custom, /<img src="\/local\/p.png"/);
+  assert.doesNotMatch(custom, /class="art/);
+});
+
+test("the HP OfficeJet Pro 9010 series shows the photo with its lit panel", () => {
+  const hass = mockHass();
+  hass.devices.p = { ...hass.devices.p, model: "OfficeJet Pro 9012" };
+  const html = render(hass).shadowRoot.innerHTML;
+  assert.match(html, /<img src="data:image\/webp/);
+  assert.match(html, /<svg class="overlay"/);
+});
+
+test("both card names are registered, the former one as an alias", () => {
+  assert.equal(customElements.get("printer-card"), PrinterCard);
+  assert.ok(customElements.get("hp-printer-card").prototype instanceof PrinterCard);
+  assert.ok(customElements.get("printer-card-editor"));
 });

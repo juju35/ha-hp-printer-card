@@ -1,28 +1,32 @@
-# ha-hp-printer-card
+# ha-printer-card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![HACS Validation](https://github.com/juju35/ha-hp-printer-card/actions/workflows/hacs.yml/badge.svg)](https://github.com/juju35/ha-hp-printer-card/actions/workflows/hacs.yml)
-[![Validate](https://github.com/juju35/ha-hp-printer-card/actions/workflows/validate.yml/badge.svg)](https://github.com/juju35/ha-hp-printer-card/actions/workflows/validate.yml)
-[![Release](https://img.shields.io/github/v/release/juju35/ha-hp-printer-card)](https://github.com/juju35/ha-hp-printer-card/releases/latest)
+[![HACS Validation](https://github.com/juju35/ha-printer-card/actions/workflows/hacs.yml/badge.svg)](https://github.com/juju35/ha-printer-card/actions/workflows/hacs.yml)
+[![Validate](https://github.com/juju35/ha-printer-card/actions/workflows/validate.yml/badge.svg)](https://github.com/juju35/ha-printer-card/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/juju35/ha-printer-card)](https://github.com/juju35/ha-printer-card/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Custom Lovelace card for HP printers in Home Assistant, built for the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (`hpprinter`) and also working with the core [IPP](https://www.home-assistant.io/integrations/ipp/) integration.
+Custom Lovelace card for printers in Home Assistant: built for HP printers with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (`hpprinter`), and working with **any IPP printer** (Brother, Canon, Epson, Xerox…) through the core [IPP](https://www.home-assistant.io/integrations/ipp/) integration.
 
-When the printer is off, the card simply says it's **offline**. Otherwise it shows the **status**, the **ink levels** and the **alerts**.
+> Formerly `ha-hp-printer-card`. Dashboards using `type: custom:hp-printer-card` keep working; new cards use `type: custom:printer-card`.
+
+When the printer is off, the card simply says it's **offline**. Otherwise it shows the **status**, the **ink or toner levels** and the **alerts**.
 
 Pick the printer, the card finds all its entities by itself.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=juju35&repository=ha-hp-printer-card&category=plugin)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=juju35&repository=ha-printer-card&category=plugin)
 
-| Online | Dark theme | Offline |
-|---|---|---|
-| ![HP Printer card](https://raw.githubusercontent.com/juju35/ha-hp-printer-card/main/screenshots/card.png) | ![HP Printer card, dark theme](https://raw.githubusercontent.com/juju35/ha-hp-printer-card/main/screenshots/card-dark.png) | ![HP Printer card, printer offline](https://raw.githubusercontent.com/juju35/ha-hp-printer-card/main/screenshots/offline.png) |
+| HP Printer | Dark theme | Offline | IPP printer (any brand) |
+|---|---|---|---|
+| ![Printer card](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/card.png) | ![Printer card, dark theme](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/card-dark.png) | ![Printer card, printer offline](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/offline.png) | ![Printer card, IPP laser printer](https://raw.githubusercontent.com/juju35/ha-printer-card/main/screenshots/ipp.png) |
 
 ## Features
 
 - **Offline state**: when the printer is turned off or unreachable, the picture turns grey and the card only shows *Offline* with the last time it was seen
 - **Status** with color: ready, sleeping, printing, scanning, copying, cancelling, stopped. The printer's control panel lights up in the status color and pulses while it works
-- **Ink levels**: one tank per cartridge, in the printer's slot order, with a warning below a configurable threshold
+- **Ink or toner levels**: one tank per cartridge, in the printer's slot order, with a warning below a configurable threshold
+- **Any IPP printer**: status, ink or toner levels and paper / cover alerts for printers of any brand through the IPP integration
+- **Pictures**: the photo of the HP OfficeJet Pro 9010 series (9010, 9012, 9015…), a drawing per HP range (OfficeJet, LaserJet, DeskJet / ENVY, Smart Tank) and a generic printer for the other brands, picked from the device model or chosen in the editor
 - **Alerts**: low or nearly empty ink, missing / used / non-HP / damaged cartridge, printhead problem, and, through the IPP integration, empty paper tray, paper jam, open cover…
 - **ePrint status**: on, off or not registered (HP cloud printing)
 - Page counter
@@ -34,7 +38,7 @@ Pick the printer, the card finds all its entities by itself.
 
 ## Prerequisites
 
-- Home Assistant 2024.8 or later with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (recommended) or the [IPP](https://www.home-assistant.io/integrations/ipp/) integration set up
+- Home Assistant 2024.8 or later with the [HP Printer](https://github.com/elad-bar/ha-hpprinter) integration (recommended for HP printers) or the [IPP](https://www.home-assistant.io/integrations/ipp/) integration (any brand) set up
 - With both integrations set up for the same printer, the card uses HP Printer for status and inks and picks up the IPP printer sensor by itself for paper and cover alerts
 
 ## Installation
@@ -43,23 +47,23 @@ Pick the printer, the card finds all its entities by itself.
 
 Click the button below to add the repository directly:
 
-[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=juju35&repository=ha-hp-printer-card&category=plugin)
+[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=juju35&repository=ha-printer-card&category=plugin)
 
 Or manually:
 
 1. Open HACS → **Frontend** → **⋮** → **Custom repositories**
-2. Add `https://github.com/juju35/ha-hp-printer-card` — Category: **Dashboard** (Lovelace)
-3. Search for **HP Printer Card** and install it
+2. Add `https://github.com/juju35/ha-printer-card` — Category: **Dashboard** (Lovelace)
+3. Search for **Printer Card** and install it
 4. Clear your browser cache and refresh
 
 HACS registers the dashboard resource for you.
 
 ### Manual
 
-1. Download `hp-printer-card.js` from the [latest release](https://github.com/juju35/ha-hp-printer-card/releases/latest)
-2. Copy it to `/config/www/hp-printer-card.js`
+1. Download `printer-card.js` from the [latest release](https://github.com/juju35/ha-printer-card/releases/latest)
+2. Copy it to `/config/www/printer-card.js`
 3. Go to **Settings → Dashboards → Resources** → Add resource:
-   - URL: `/local/hp-printer-card.js`
+   - URL: `/local/printer-card.js`
    - Type: **JavaScript Module**
 4. Clear your browser cache and refresh
 
@@ -67,12 +71,12 @@ HACS registers the dashboard resource for you.
 
 ### Visual editor
 
-Add the card from the dashboard (**Add card** → **HP Printer Card**). The first printer found is picked automatically; change it with the **Printer** field, then set the name, the sections to show and the low ink threshold. The **Entities (advanced)** panel lets you force an entity if auto-detection picks the wrong one. Options left at their default are not written to the YAML.
+Add the card from the dashboard (**Add card** → **Printer Card**). The first printer found is picked automatically; change it with the **Printer** field, then set the name, the picture, the sections to show and the low ink threshold. The **Entities (advanced)** panel lets you force an entity if auto-detection picks the wrong one. Options left at their default are not written to the YAML.
 
 ### Minimal
 
 ```yaml
-type: custom:hp-printer-card
+type: custom:printer-card
 device_id: e1146b5da5cdfee3f4b06c25b0c863a7
 ```
 
@@ -81,7 +85,7 @@ Use either `device_id` (what the visual editor writes) or `entity` (any entity o
 ### Full options
 
 ```yaml
-type: custom:hp-printer-card
+type: custom:printer-card
 device_id: e1146b5da5cdfee3f4b06c25b0c863a7
 name: Printer
 show_image: true
@@ -92,6 +96,7 @@ show_stats: true
 show_eprint: true
 show_expired: false
 low_threshold: 15
+picture: auto
 admin_url: http://printer.local
 image: /local/my-printer.png
 language: en
@@ -111,15 +116,16 @@ entities:
 | `entity` | ❌ | — | Any entity of the printer's main device, used to find the device |
 | `name` | ❌ | Device name | Card title |
 | `show_image` | ❌ | `true` | Show the printer picture |
-| `show_logo` | ❌ | `true` | Show the HP logo in the top right corner; clicking it opens hp.com |
-| `show_inks` | ❌ | `true` | Show the ink levels |
+| `show_logo` | ❌ | `true` | Show the HP logo in the top right corner (HP printers only); clicking it opens hp.com |
+| `show_inks` | ❌ | `true` | Show the ink or toner levels |
 | `show_alerts` | ❌ | `true` | Show the alerts |
 | `show_stats` | ❌ | `true` | Show the total page counter |
 | `show_eprint` | ❌ | `true` | Show the ePrint status (HP Printer integration only) |
 | `show_expired` | ❌ | `false` | Also alert when a cartridge's warranty date has passed |
 | `low_threshold` | ❌ | `15` | Ink level (%) at or below which a cartridge is flagged as low; at 5 % or less it is nearly empty |
 | `admin_url` | ❌ | Detected | Page opened when clicking the printer picture, e.g. `http://printer.local`. By default, the device's configuration URL or the address of its IPP sensor |
-| `image` | ❌ | Bundled picture | URL of your own printer picture, e.g. `/local/printer.png` |
+| `picture` | ❌ | `auto` | Picture: `auto`, `officejet_pro_9010` (photo), `officejet`, `laserjet`, `deskjet`, `smart_tank` or `generic` (see below) |
+| `image` | ❌ | — | URL of your own printer picture, e.g. `/local/printer.png`; replaces `picture` |
 | `language` | ❌ | Auto | Force language: `fr` or `en` (auto-detects from HA settings) |
 | `entities` | ❌ | Auto | Override detected entities (see below) |
 
@@ -137,27 +143,40 @@ Keys accepted under `entities`:
 
 Cartridges are always found from the printer's devices.
 
+### Pictures
+
+| `picture` | Used by `auto` for |
+|---|---|
+| `officejet_pro_9010` | HP OfficeJet Pro 9010 series (9010, 9012, 9015, 9020…): photo |
+| `officejet` | Other HP models (OfficeJet, PageWide…): all-in-one drawing |
+| `laserjet` | HP LaserJet, Neverstop |
+| `deskjet` | HP DeskJet, ENVY, Tango |
+| `smart_tank` | HP Smart Tank, Ink Tank |
+| `generic` | Printers of other brands (IPP) |
+
+The control panel of each picture lights up in the status color.
+
 ## Screenshots
 
-| Light | Dark (French) | Printer offline |
-|---|---|---|
-| ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) |
+| Light | Dark (French) | Printer offline | IPP laser printer |
+|---|---|---|---|
+| ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) | ![ipp](screenshots/ipp.png) |
 
 ## How it works
 
 The HP Printer integration creates one device per part of the printer (each cartridge, the printhead, the print, scan and copy counters) linked to the main device. The card reads the entity registry to list them, then for each cartridge finds its level, slot, status and warranty date. The printer is shown as **offline** when its status sensor reports `off` (that's what the integration does when the printer stops answering) or is unavailable.
 
-With the IPP integration only, the card reads the `<color> cartridge` sensors and the printer sensor of the IPP device.
+With the IPP integration only (any brand), the card reads the printer sensor of the IPP device for the status and the `printer-state-reasons` alerts, and its marker sensors for the ink or toner levels. The HP logo and the ePrint chip are only shown for HP printers.
 
-The bundled picture is an HP OfficeJet Pro 9010; set `image` to use a picture of your own model (the lit control panel is only drawn on the bundled picture).
+Set `image` to use a photo of your own model (the lit control panel is only drawn on the bundled pictures).
 
 ## Development
 
 ```bash
 npm install
-npm run build        # stamps the version of package.json into dist/hp-printer-card.js
+npm run build        # stamps the version of package.json into dist/printer-card.js
 npm run check        # builds and checks the card (run in CI)
-npm run screenshots  # renders the card with a mock HP printer into screenshots/
+npm run screenshots  # renders the card with mock HP and IPP printers into screenshots/
 ```
 
 `dist/` is not committed: `npm run build` creates it locally, CI builds it on every push, and the release workflow attaches the built file to the release, which is where HACS downloads it from.
@@ -166,7 +185,7 @@ npm run screenshots  # renders the card with a mock HP printer into screenshots/
 
 1. Bump `version` in `package.json`
 2. Add a `## <version>` section at the top of [CHANGELOG.md](CHANGELOG.md)
-3. Push to `main`: the **Release** workflow builds the card, creates the tag and the GitHub release with the changelog section as notes, and attaches `hp-printer-card.js`
+3. Push to `main`: the **Release** workflow builds the card, creates the tag and the GitHub release with the changelog section as notes, and attaches `printer-card.js`
 
 ## Translations
 

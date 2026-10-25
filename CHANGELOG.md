@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0
+
+### Breaking changes
+- The repository becomes `ha-printer-card` and the card `custom:printer-card`; the file is now `printer-card.js` (HACS: **Printer Card**). `custom:hp-printer-card` stays registered as an alias, so existing dashboards keep working. A resource added by hand as `/local/hp-printer-card.js` must point to `/local/printer-card.js`.
+
+### New
+- Any IPP printer (Brother, Canon, Epson…): status, ink or toner levels and paper / cover alerts through the IPP integration. *Toner levels* title for laser cartridges.
+- `picture` option, in the visual editor too: the photo of the HP OfficeJet Pro 9010 series (9010, 9012…), drawings for the HP OfficeJet, LaserJet, DeskJet / ENVY and Smart Tank ranges, and a generic printer. `auto` (default) picks it from the device model; their control panel lights up in the status color.
+
+### Changes
+- The HP logo only shows for HP printers; "No printer found" instead of "No HP printer found".
+
 ## 1.5.2
 
 ### Fixes

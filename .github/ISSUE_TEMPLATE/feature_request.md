@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for the HP Printer Card
+about: Suggest an idea for the Printer Card
 title: "[Feature] "
 labels: enhancement
 assignees: ""

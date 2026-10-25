@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug with the HP Printer Card
+about: Report a bug with the Printer Card
 title: "[Bug] "
 labels: bug
 assignees: ""
@@ -27,11 +27,11 @@ If applicable, add screenshots to help explain your problem.
 - HACS version:
 - Card version:
 - Printer model:
-- Integration (HP Printer or IPP) and version:
+- Integration (HP Printer or IPP), version and printer brand/model:
 
 **Card configuration:**
 ```yaml
-type: custom:hp-printer-card
+type: custom:printer-card
 device_id: ...
 ```
 

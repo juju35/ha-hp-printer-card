@@ -215,7 +215,11 @@ test("the picture follows the model", () => {
 test("the generic picture hides the HP logo, even for an HP printer", () => {
   const hass = mockHass();
   assert.match(render(hass).shadowRoot.innerHTML, /class="logo"/);
-  assert.doesNotMatch(render(hass, { device_id: "p", picture: "generic" }).shadowRoot.innerHTML, /class="logo"/);
+  const generic = render(hass, { device_id: "p", picture: "generic" }).shadowRoot.innerHTML;
+  assert.doesNotMatch(generic, /class="logo"/);
+  // A printer icon takes the logo's place, unless show_logo is off.
+  assert.match(generic, /<span class="logo mark"><ha-icon icon="mdi:printer"><\/ha-icon><\/span>/);
+  assert.doesNotMatch(render(hass, { device_id: "p", picture: "generic", show_logo: false }).shadowRoot.innerHTML, /class="logo/);
 });
 
 test("the picture option overrides detection, and a custom image overrides both", () => {
@@ -258,15 +262,15 @@ const documentClick = (path) => {
   for (const [type, fn, capture] of listeners) if (type === "click" && capture) fn({ composedPath: () => path });
 };
 
-test("the mini card shows the name, the status and one chip per cartridge, tinted when low", () => {
+test("the mini card is laid out like the Home Connect mini cards, with one small tank per cartridge, tinted when low", () => {
   const html = mini(levels(mockHass(), { yellow: 3, cyan: 12 })).shadowRoot.innerHTML;
   assert.match(html, /<ha-card class="mini">/);
-  assert.match(html, /<div class="name">OfficeJet<\/div>/);
-  assert.match(html, /<div class="status">.*Ready/);
-  assert.equal((html.match(/class="dot"/g) || []).length, 4);
-  assert.match(html, /<span class="r error"[^>]*><span class="dot"[^>]*><\/span>3 %/);
-  assert.match(html, /<span class="r warn"[^>]*><span class="dot"[^>]*><\/span>12 %/);
-  assert.match(html, /<span class="r"[^>]*><span class="dot"[^>]*><\/span>50 %/);
+  assert.match(html, /<div class="header">.*<div class="titles"><div class="name">OfficeJet<\/div><\/div><span class="st"><span class="dot"><\/span>Ready<\/span>/);
+  assert.match(html, /<div class="content">.*<div class="info">/);
+  assert.equal((html.match(/class="mt"/g) || []).length, 4);
+  assert.match(html, /<span class="r error"[^>]*><span class="mt"><span style="height:3%;[^"]*"><\/span><\/span>3 %/);
+  assert.match(html, /<span class="r warn"[^>]*><span class="mt"><span style="height:12%;[^"]*"><\/span><\/span>12 %/);
+  assert.match(html, /<span class="r"[^>]*><span class="mt"><span style="height:50%;[^"]*"><\/span><\/span>50 %/);
   // Neither the full card's sections nor an ink alert chip repeating the cartridge.
   assert.doesNotMatch(html, /Ink levels|class="tank"|ink low/);
 });
@@ -280,7 +284,7 @@ test("the mini card says offline, without chips, when the printer is off", () =>
   const html = mini(mockHass({ status: "unavailable" })).shadowRoot.innerHTML;
   assert.match(html, /<ha-card class="offline mini">/);
   assert.match(html, /Offline/);
-  assert.doesNotMatch(html, /class="dot"/);
+  assert.doesNotMatch(html, /class="mt"/);
 });
 
 test("the mini card keeps the HP logo rule of the full card", () => {

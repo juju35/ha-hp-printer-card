@@ -34,7 +34,7 @@ Pick the printer, the card finds all its entities by itself. A compact **Printer
 - **Alerts**: low or nearly empty ink, missing / used / non-HP / damaged cartridge, printhead problem, and, through the IPP integration, empty paper tray, paper jam, open cover…
 - **ePrint status**: on, off or not registered (HP cloud printing)
 - Page counter
-- **Mini card**: picture, name and status on one line, then one chip per cartridge (tinted orange when low, red when nearly empty) and per alert
+- **Mini card**, laid out like the Home Connect mini cards: logo, name and status on top, then the picture with one chip per cartridge (a small tank at its level, outlined orange when low, red when nearly empty) and per alert
 - **Detail button** on the mini card (top right): shows the full card in place, with everything it shows; the button, or a click anywhere else, goes back to the compact view. `zoom: false` removes it
 - Automatic entity discovery from the device (works with English or French entity IDs), status, IPP sensor, ePrint sensors and page counter can be overridden
 - Visual editor in the dashboard UI (no YAML needed)

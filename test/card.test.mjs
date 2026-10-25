@@ -262,12 +262,11 @@ const documentClick = (path) => {
   for (const [type, fn, capture] of listeners) if (type === "click" && capture) fn({ composedPath: () => path });
 };
 
-test("the mini card shows the full card's header and one small tank per cartridge, tinted when low", () => {
+test("the mini card is laid out like the Home Connect mini cards, with one small tank per cartridge, tinted when low", () => {
   const html = mini(levels(mockHass(), { yellow: 3, cyan: 12 })).shadowRoot.innerHTML;
   assert.match(html, /<ha-card class="mini">/);
-  assert.match(html, /<div class="name">OfficeJet<\/div>/);
-  assert.match(html, /<div class="status">.*Ready/);
-  assert.match(html, /<div class="head">.*<div class="meta"><div class="name">/);
+  assert.match(html, /<div class="header">.*<div class="titles"><div class="name">OfficeJet<\/div><\/div><span class="st"><span class="dot"><\/span>Ready<\/span>/);
+  assert.match(html, /<div class="content">.*<div class="info">/);
   assert.equal((html.match(/class="mt"/g) || []).length, 4);
   assert.match(html, /<span class="r error"[^>]*><span class="mt"><span style="height:3%;[^"]*"><\/span><\/span>3 %/);
   assert.match(html, /<span class="r warn"[^>]*><span class="mt"><span style="height:12%;[^"]*"><\/span><\/span>12 %/);

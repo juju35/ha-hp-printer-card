@@ -1034,7 +1034,7 @@ class PrinterCard extends HTMLElement {
 }
 
 // ── printer-mini-card ────────────────────────────────────────────────────────
-// The same printer in the full card's header: picture, name and status, then one small tank per cartridge and one chip per alert.
+// Laid out like the Home Connect mini cards: logo, name and status, then the picture with one chip per cartridge and per alert.
 // Its detail button (top right, `zoom: false` removes it) switches it to the full card and back;
 // a click anywhere else brings it back too.
 var HP_MINI_STYLES =
@@ -1047,12 +1047,29 @@ var HP_MINI_STYLES =
   '.head:has(> .zoom) .logo { right: 30px; }' +
   '.head:has(> .zoom) .meta { padding-right: 30px; }' +
   '.head:has(> .zoom):has(.logo) .meta { padding-right: 60px; }' +
-  // Compact view: the full card's header (corner logo, picture, name, status pill) with a row of gauges and alerts.
-  '.mini .pic { width: 22%; max-width: 88px; }' +
-  '.rs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }' +
+  // Compact view, like the Home Connect mini cards: header (logo, name, status, detail button), then picture and details.
+  'ha-card.mini { gap: 10px; }' +
+  '.mini .header { display: flex; align-items: center; gap: 10px; }' +
+  '.mini .logo { position: static; flex: none; width: 32px; height: 32px; }' +
+  '.mini .logo.mark { border-radius: 50%; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
+  '.mini .logo.mark ha-icon { --mdc-icon-size: 18px; }' +
+  '.mini .titles { flex: 1; min-width: 0; }' +
+  '.mini .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+  '.st { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 1px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;' +
+    ' white-space: nowrap; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
+  '.st .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hp-color); }' +
+  '.mini .zoom { margin: -4px -4px -4px 0; }' +
+  '.mini .content { display: flex; align-items: center; gap: 12px; }' +
+  '.mini .pic { width: 56px; max-width: none; }' +
+  '.mini .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }' +
+  '.line { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--secondary-text-color); min-width: 0; }' +
+  '.line ha-icon { --mdc-icon-size: 14px; flex-shrink: 0; }' +
+  '.line span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+  '.rs { display: flex; flex-wrap: wrap; gap: 6px; }' +
   '.rs:empty { display: none; }' +
-  '.r { --t: var(--secondary-text-color); display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px 1px 5px; border-radius: 999px;' +
-    ' font-size: 12px; font-weight: 500; line-height: 18px; white-space: nowrap; color: var(--primary-text-color); }' +
+  '.r { --t: var(--secondary-text-color); display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 5px; border-radius: 12px;' +
+    ' font-size: 11px; font-weight: 500; white-space: nowrap; color: var(--secondary-text-color);' +
+    ' background: var(--secondary-background-color, rgba(128,128,128,0.12)); }' +
   '.r ha-icon { --mdc-icon-size: 13px; color: var(--t); }' +
   // A small tank, like the full card's ink levels: filled to the level, outlined when low or nearly empty.
   '.r .mt { position: relative; width: 10px; height: 14px; flex: none; border-radius: 3px; overflow: hidden;' +
@@ -1061,9 +1078,7 @@ var HP_MINI_STYLES =
   '.r.warn .mt, .r.error .mt { box-shadow: inset 0 0 0 1.5px var(--t); }' +
   '.r.warn { --t: var(--warning-color, #ffa600); }' +
   '.r.error { --t: var(--error-color, #db4437); }' +
-  '.r.warn, .r.error { color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }' +
-  '.r.info { color: var(--secondary-text-color); }' +
-  '.r.seen { color: var(--secondary-text-color); font-weight: 400; padding-left: 0; }';
+  '.r.warn, .r.error { color: var(--t); background: color-mix(in srgb, var(--t) 15%, transparent); }';
 
 class PrinterMiniCard extends PrinterCard {
   static defaults = Object.assign({}, HP_DEFAULTS, { zoom: true });
@@ -1111,9 +1126,15 @@ class PrinterMiniCard extends PrinterCard {
     if (this._zoomed || !r.deviceId || !r.status) super._render(r);
     else {
       var v = this._view(r);
-      this._paint(v, '<div class="head">' + v.logoHtml + v.imageHtml + '<div class="meta">' +
-        '<div class="name">' + hpEsc(v.name) + '</div>' + this._statusPill(v) +
-        '<div class="rs">' + this._chips(r, v) + '</div></div>' + this._corner() + '</div>', 'mini');
+      var seen = v.offline ? this._lastSeen(r) : '';
+      this._paint(v, '<div class="header">' + v.logoHtml +
+          '<div class="titles"><div class="name">' + hpEsc(v.name) + '</div></div>' +
+          '<span class="st"><span class="dot"></span>' + hpEsc(this._t(`st_${v.state}`)) + '</span>' + this._corner() +
+        '</div>' +
+        '<div class="content">' + v.imageHtml + '<div class="info">' +
+          (seen ? `<div class="line"><ha-icon icon="mdi:clock-outline"></ha-icon><span>${seen}</span></div>` : '') +
+          '<div class="rs">' + this._chips(r, v) + '</div>' +
+        '</div></div>', 'mini');
     }
     this.shadowRoot.querySelector('.zoom')?.addEventListener('click', (ev) => this._toggleZoom(ev));
   }
@@ -1131,10 +1152,7 @@ class PrinterMiniCard extends PrinterCard {
   // One chip per cartridge (dot in its color and level), then one per alert the cartridges do not already show.
   _chips(r, v) {
     var c = this._config;
-    if (v.offline) {
-      var seen = this._lastSeen(r);
-      return seen ? `<span class="r seen">${seen}</span>` : '';
-    }
+    if (v.offline) return '';
     var out = [];
     if (c.show_inks) {
       r.inks.filter((i) => !i.printhead && i.level).forEach((ink) => {

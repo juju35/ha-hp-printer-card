@@ -3,8 +3,8 @@
 ## 2.2.0
 
 ### Changes
-- Mini card: same look as the full card — HP logo in the top right corner, name and status pill stacked, a larger picture, and a small tank per cartridge (filled to its level, outlined orange or red when low) instead of a dot.
-- Without the HP logo (other brands, generic picture), a printer icon takes its place in the corner; `show_logo: false` still removes both.
+- Mini card laid out like the Home Connect mini cards: logo, name, status (dot and label) and detail button on top, then the picture with one chip per cartridge — a small tank filled to its level, outlined orange or red when low — and per alert. Offline, the last time the printer was seen shows under a clock icon.
+- Without the HP logo (other brands, generic picture), a printer icon takes its place (in the status color on the mini card); `show_logo: false` still removes both.
 
 ## 2.1.0
 

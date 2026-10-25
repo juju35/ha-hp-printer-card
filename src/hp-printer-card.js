@@ -442,6 +442,12 @@ var HP_LOGO = '<svg viewBox="0 0 1280 1280" aria-hidden="true"><defs><clipPath i
   '<path fill-rule="evenodd" d="M819 358H1070Q1118 358 1143 391Q1168 424 1151 470L1009 866Q1000 890 977 905Q956 918 932 918H752L614 1300H485ZM924 441H1026L883 832H781Z"/></g></svg>';
 
 // ── Card ─────────────────────────────────────────────────────────────────────
+// The card's focusable links, by the class that identifies each across renders.
+var HP_FOCUSABLE = ['pic', 'logo'];
+function hpFocusKey(el) {
+  return el?.tagName === 'A' && el.classList ? HP_FOCUSABLE.find((k) => el.classList.contains(k)) || '' : '';
+}
+
 var HP_DEFAULTS = {
   show_image: true, show_logo: true, show_inks: true, show_alerts: true, show_stats: true, show_eprint: true, show_expired: false, low_threshold: 15,
 };
@@ -797,7 +803,10 @@ class HpPrinterCard extends HTMLElement {
       '</div>';
     }
 
+    var focused = hpFocusKey(this.shadowRoot.activeElement);
     this.shadowRoot.innerHTML = `${this._styles(color)}<ha-card class="${offline ? 'offline' : ''}">${head}${inksHtml}${alertsHtml}</ha-card>`;
+    // innerHTML replaced the focused link: focus its counterpart so keyboard navigation keeps its place.
+    if (focused) this.shadowRoot.querySelector(`a.${focused}`)?.focus({ preventScroll: true });
   }
 
   _styles(color) {

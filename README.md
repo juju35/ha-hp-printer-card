@@ -132,7 +132,7 @@ entities:
 | `entity` | ❌ | — | Any entity of the printer's main device, used to find the device |
 | `name` | ❌ | Device name | Card title |
 | `show_image` | ❌ | `true` | Show the printer picture |
-| `show_logo` | ❌ | `true` | Show the HP logo in the top right corner (HP printers, not with the `generic` picture; clicking it opens hp.com), or a printer icon in its place otherwise |
+| `show_logo` | ❌ | `true` | Show the HP logo before the name (HP printers, not with the `generic` picture; clicking it opens hp.com), or a printer icon in its place otherwise |
 | `show_inks` | ❌ | `true` | Show the ink or toner levels |
 | `show_alerts` | ❌ | `true` | Show the alerts |
 | `show_stats` | ❌ | `true` | Show the total page counter |

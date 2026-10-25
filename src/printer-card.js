@@ -935,13 +935,15 @@ class PrinterCard extends HTMLElement {
         hpEsc(this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) })) + '</div>';
     }
 
-    var head = '<div class="head">' + v.logoHtml + v.imageHtml +
+    // Like the Home Connect cards: logo and name on top, then the picture with the status and its chips.
+    var head = '<div class="header">' + v.logoHtml +
+      '<div class="titles"><div class="name">' + hpEsc(v.name) + '</div></div>' + this._corner() + '</div>' +
+      '<div class="head">' + v.imageHtml +
       '<div class="meta">' +
-        '<div class="name">' + hpEsc(v.name) + '</div>' +
         this._statusPill(v) +
         (chips.length ? `<div class="chips">${chips.join('')}</div>` : '') +
         sub +
-      '</div>' + this._corner() + '</div>';
+      '</div></div>';
 
     var inksHtml = '';
     var cartridges = r.inks.filter((i) => !i.printhead && i.level);
@@ -975,13 +977,15 @@ class PrinterCard extends HTMLElement {
       ':host { display: block; height: 100%; --hp-color: ' + (color || 'var(--disabled-text-color, #9e9e9e)') + '; }' +
       'ha-card { height: 100%; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 10px; }' +
       '.empty { display: flex; align-items: center; gap: 10px; color: var(--secondary-text-color); }' +
-      '.head { position: relative; display: flex; align-items: center; gap: 12px; }' +
-      '.logo { position: absolute; top: 0; right: 0; width: 22px; height: 22px; line-height: 0; transition: transform 0.2s; }' +
+      '.header { display: flex; align-items: center; gap: 10px; }' +
+      '.titles { flex: 1; min-width: 0; }' +
+      '.logo { flex: none; display: block; width: 40px; height: 40px; line-height: 0; transition: transform 0.2s; }' +
       '.logo svg { width: 100%; height: 100%; }' +
       'a.logo:hover { transform: scale(1.08); }' +
-      '.logo.mark { display: grid; place-items: center; color: var(--secondary-text-color); }' +
+      // In place of the HP logo: a printer in a round badge, in the status color.
+      '.logo.mark { display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
       '.logo.mark ha-icon { --mdc-icon-size: 22px; }' +
-      '.head:has(.logo) .meta { padding-right: 30px; }' +
+      '.head { display: flex; align-items: center; gap: 12px; }' +
       'a.pic { cursor: pointer; }' +
       'a.pic:hover img { filter: brightness(1.06); }' +
       '.pic { display: block; position: relative; width: 28%; max-width: 120px; flex-shrink: 0; transition: filter 0.4s, opacity 0.4s; }' +
@@ -993,7 +997,7 @@ class PrinterCard extends HTMLElement {
       '.pic.off { filter: grayscale(1); opacity: 0.55; }' +
       '.pic.off .screen { display: none; }' +
       '.meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }' +
-      '.name { font-size: 16px; font-weight: 500; color: var(--primary-text-color); line-height: 1.25; }' +
+      '.name { font-size: 16px; font-weight: 500; color: var(--primary-text-color); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
       '.status { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12px; font-weight: 500; color: var(--hp-color);' +
         ' padding: 2px 10px 2px 6px; border-radius: 12px; background: color-mix(in srgb, var(--hp-color) 15%, transparent); }' +
       '.status ha-icon { --mdc-icon-size: 14px; }' +
@@ -1042,23 +1046,14 @@ var HP_MINI_STYLES =
   '.zoom ha-icon { --mdc-icon-size: 16px; }' +
   '.zoom:hover { background: color-mix(in srgb, var(--secondary-text-color) 16%, transparent); color: var(--primary-text-color); }' +
   '.zoom:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 1px; }' +
-  // Full view: the button takes the top right corner, the HP logo moves to its left.
-  '.head > .zoom { position: absolute; top: -1px; right: -1px; }' +
-  '.head:has(> .zoom) .logo { right: 30px; }' +
-  '.head:has(> .zoom) .meta { padding-right: 30px; }' +
-  '.head:has(> .zoom):has(.logo) .meta { padding-right: 60px; }' +
+  '.header > .zoom { margin: -4px -4px -4px 0; }' +
   // Compact view, like the Home Connect mini cards: header (logo, name, status, detail button), then picture and details.
   'ha-card.mini { gap: 10px; }' +
-  '.mini .header { display: flex; align-items: center; gap: 10px; }' +
-  '.mini .logo { position: static; flex: none; width: 32px; height: 32px; }' +
-  '.mini .logo.mark { border-radius: 50%; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
+  '.mini .logo { width: 32px; height: 32px; }' +
   '.mini .logo.mark ha-icon { --mdc-icon-size: 18px; }' +
-  '.mini .titles { flex: 1; min-width: 0; }' +
-  '.mini .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
   '.st { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 1px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;' +
     ' white-space: nowrap; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
   '.st .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hp-color); }' +
-  '.mini .zoom { margin: -4px -4px -4px 0; }' +
   '.mini .content { display: flex; align-items: center; gap: 12px; }' +
   '.mini .pic { width: 56px; max-width: none; }' +
   '.mini .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }' +

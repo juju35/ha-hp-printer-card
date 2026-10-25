@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1
+
+### Changes
+- Full card (and the mini card's full view): the HP logo, or the printer icon in its place, sits before the name on a header line, like the Home Connect cards, instead of the top right corner; the status, chips and picture come below. The detail button stays at the right end of that line.
+
 ## 2.2.0
 
 ### Changes

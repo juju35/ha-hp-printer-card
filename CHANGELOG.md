@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+### Breaking changes
+- The `custom:hp-printer-card` alias is removed: replace it with `type: custom:printer-card` in your dashboards.
+
 ## 2.0.0
 
 ### Breaking changes

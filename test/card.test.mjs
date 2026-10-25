@@ -219,8 +219,8 @@ test("the picture option overrides detection, and a custom image overrides both"
 });
 
 
-test("both card names are registered, the former one as an alias", () => {
+test("the card and its editor are registered under their new names only", () => {
   assert.equal(customElements.get("printer-card"), PrinterCard);
-  assert.ok(customElements.get("hp-printer-card").prototype instanceof PrinterCard);
   assert.ok(customElements.get("printer-card-editor"));
+  assert.equal(customElements.get("hp-printer-card"), undefined);
 });

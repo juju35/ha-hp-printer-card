@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+
+### Changes
+- No HP logo with the generic picture, whether detected or set with `picture: generic`.
+
 ## 2.0.1
 
 ### Breaking changes

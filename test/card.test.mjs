@@ -210,6 +210,12 @@ test("the picture follows the model", () => {
   assert.equal(pic("ET-2850", "EPSON", "ipp"), "generic");
 });
 
+test("the generic picture hides the HP logo, even for an HP printer", () => {
+  const hass = mockHass();
+  assert.match(render(hass).shadowRoot.innerHTML, /class="logo"/);
+  assert.doesNotMatch(render(hass, { device_id: "p", picture: "generic" }).shadowRoot.innerHTML, /class="logo"/);
+});
+
 test("the picture option overrides detection, and a custom image overrides both", () => {
   const hass = mockHass();
   assert.match(render(hass, { device_id: "p", picture: "generic" }).shadowRoot.innerHTML, /art-generic/);

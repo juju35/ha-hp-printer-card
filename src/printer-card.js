@@ -63,7 +63,7 @@ var HpI18n = {
     ed_show_stats: 'Compteur de pages',
     ed_show_expired: 'Alerte garantie expirée',
     ed_low_threshold: 'Seuil d\'encre faible (%)',
-    ed_show_logo: 'Logo HP (imprimantes HP)',
+    ed_show_logo: 'Logo HP (imprimantes HP, sauf illustration générique)',
     ed_admin_url: 'Page d\'administration (URL)',
     ed_admin_url_helper: 'Ouverte au clic sur l\'imprimante — laisser vide pour l\'adresse détectée',
     open_admin: 'Ouvrir la page d\'administration de l\'imprimante',
@@ -152,7 +152,7 @@ var HpI18n = {
     ed_show_stats: 'Page counter',
     ed_show_expired: 'Expired warranty alert',
     ed_low_threshold: 'Low ink threshold (%)',
-    ed_show_logo: 'HP logo (HP printers)',
+    ed_show_logo: 'HP logo (HP printers, not with the generic picture)',
     ed_admin_url: 'Admin page (URL)',
     ed_admin_url_helper: 'Opened when clicking the printer — leave empty for the detected address',
     open_admin: 'Open the printer admin page',
@@ -784,11 +784,16 @@ class PrinterCard extends HTMLElement {
     }
   }
 
+  // Drawing set by the `picture` option, else detected from the device.
+  _pictureKey(r) {
+    var pic = this._config.picture;
+    return HP_PICTURES.indexOf(pic) < 1 ? hpPictureFor(this._hass.devices?.[r.deviceId], r.kind) : pic;
+  }
+
   // Custom image, else the configured or detected drawing.
   _picture(r, custom) {
     if (custom) return `<img src="${hpEsc(custom)}" alt="">`;
-    var pic = this._config.picture;
-    if (HP_PICTURES.indexOf(pic) < 1) pic = hpPictureFor(this._hass.devices?.[r.deviceId], r.kind);
+    var pic = this._pictureKey(r);
     return `<svg class="art art-${pic}" viewBox="0 0 160 120" aria-hidden="true">${HP_ART_DEFS}${HP_ART[pic]}</svg>`;
   }
 
@@ -850,7 +855,8 @@ class PrinterCard extends HTMLElement {
         hpEsc(this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) })) + '</div>';
     }
 
-    var logoHtml = c.show_logo && r.isHp
+    // No HP logo next to the generic printer, even for an HP device.
+    var logoHtml = c.show_logo && r.isHp && this._pictureKey(r) !== 'generic'
       ? `<a class="logo" href="https://www.hp.com" target="_blank" rel="noopener noreferrer" title="${hpEsc(this._t('open_hp'))}">${HP_LOGO}</a>`
       : '';
 

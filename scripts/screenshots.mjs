@@ -226,3 +226,7 @@ await animate(
   { file: "printing", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
   { icons, hass }
 );
+await animate(
+  { file: "printing-mini", type: "printer-mini-card", theme: "light", width: 380, config: { device_id: "laser" }, hass: ipp },
+  { icons, hass }
+);

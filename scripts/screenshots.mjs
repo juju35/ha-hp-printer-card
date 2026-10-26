@@ -70,6 +70,7 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
   // A fresh page per shot: re-running the scripts in the same realm would redeclare their globals.
   for (const s of shots) {
     const page = await browser.newPage({ deviceScaleFactor: 2, viewport: { width: 1000, height: 2000 } });
+    page.on("pageerror", (err) => console.error(`${s.file}: ${err.message}`));
     await page.setContent(pageHtml(s.theme, s.width));
     await page.addScriptTag({ content: haElements(icons) + extra });
     await page.addScriptTag({ content: cardJs });
@@ -85,7 +86,13 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
     );
     if (s.after) await s.after(page);
     await page.waitForTimeout(400);
-    await page.locator(s.type).screenshot({ path: `${root}screenshots/${s.file}.png`, animations: "disabled" });
+    // The card plus the 16px page padding around it, on the theme background.
+    const box = await page.locator("#root").boundingBox();
+    await page.screenshot({
+      path: `${root}screenshots/${s.file}.png`,
+      clip: { x: 0, y: 0, width: s.width + 32, height: Math.ceil(box.height) + 32 },
+      animations: "disabled",
+    });
     console.log(`screenshots/${s.file}.png`);
     await page.close();
   }
@@ -165,15 +172,15 @@ const zoomIn = (page) =>
 await render(
   [
     { file: "card", type: "printer-card", theme: "light", width: 460, config: {} },
-    { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: { language: "fr" } },
+    { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: {} },
     { file: "offline", type: "printer-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
     { file: "ipp", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
-    { file: "mini-card", type: "printer-mini-card", theme: "light", width: 460, config: {} },
-    { file: "mini-card-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" } },
-    { file: "mini-offline", type: "printer-mini-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
-    { file: "mini-offline-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, hass: { states: offline } },
+    { file: "mini-card", type: "printer-mini-card", theme: "light", width: 380, config: {} },
+    { file: "mini-card-dark", type: "printer-mini-card", theme: "dark", width: 380, config: {} },
+    { file: "mini-offline", type: "printer-mini-card", theme: "light", width: 380, config: {}, hass: { states: offline } },
+    { file: "mini-offline-dark", type: "printer-mini-card", theme: "dark", width: 380, config: {}, hass: { states: offline } },
     { file: "mini-zoom", type: "printer-mini-card", theme: "light", width: 460, config: {}, after: zoomIn },
-    { file: "mini-zoom-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, after: zoomIn },
+    { file: "mini-zoom-dark", type: "printer-mini-card", theme: "dark", width: 460, config: {}, after: zoomIn },
   ],
   { icons, hass }
 );

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+- The printer icon shown in place of the HP logo uses the shared round badge of the other cards: 16 % tint of the status color, 24 px icon (20 px on the mini card).
+- The status pill (Ready, Printing, Offline…) sits in the header row, right of the name (before the detail button on the mini card's full view), instead of on its own line next to the picture; the ink / alert / ePrint chips stay next to the picture.
+- Header geometry: the body starts 8 px under the header (was 10 px); logo 12 px from the top and left edges, status pill 12 px from the right edge (detail button 8 px).
+- The Ink levels / Toner and Alerts section titles have a leading 16 px icon, like the other cards' section titles.
+
 ## 2.2.1
 
 ### Changes

@@ -70,6 +70,7 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
   // A fresh page per shot: re-running the scripts in the same realm would redeclare their globals.
   for (const s of shots) {
     const page = await browser.newPage({ deviceScaleFactor: 2, viewport: { width: 1000, height: 2000 } });
+    page.on("pageerror", (err) => console.error(`${s.file}: ${err.message}`));
     await page.setContent(pageHtml(s.theme, s.width));
     await page.addScriptTag({ content: haElements(icons) + extra });
     await page.addScriptTag({ content: cardJs });
@@ -85,7 +86,13 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
     );
     if (s.after) await s.after(page);
     await page.waitForTimeout(400);
-    await page.locator(s.type).screenshot({ path: `${root}screenshots/${s.file}.png`, animations: "disabled" });
+    // The card plus the 16px page padding around it, on the theme background.
+    const box = await page.locator("#root").boundingBox();
+    await page.screenshot({
+      path: `${root}screenshots/${s.file}.png`,
+      clip: { x: 0, y: 0, width: s.width + 32, height: Math.ceil(box.height) + 32 },
+      animations: "disabled",
+    });
     console.log(`screenshots/${s.file}.png`);
     await page.close();
   }
@@ -94,6 +101,9 @@ export async function render(shots, { icons = {}, hass = {}, extra = "" } = {}) 
 
 const icons = {
   "alert": "M13 14H11V9H13M13 18H11V16H13M1 21H23L12 2L1 21Z",
+  "alert-outline": "M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16",
+  "invert-colors": "M12,19.58V19.58C10.4,19.58 8.89,18.96 7.76,17.83C6.62,16.69 6,15.19 6,13.58C6,12 6.62,10.47 7.76,9.34L12,5.1M17.66,7.93L12,2.27V2.27L6.34,7.93C3.22,11.05 3.22,16.12 6.34,19.24C7.9,20.8 9.95,21.58 12,21.58C14.05,21.58 16.1,20.8 17.66,19.24C20.78,16.12 20.78,11.05 17.66,7.93Z",
+  "water-outline": "M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z",
   "arrow-collapse": "M19.5,3.09L15,7.59V4H13V11H20V9H16.41L20.91,4.5L19.5,3.09M4,13V15H7.59L3.09,19.5L4.5,20.91L9,16.41V20H11V13H4Z",
   "arrow-expand": "M10,21V19H6.41L10.91,14.5L9.5,13.09L5,17.59V14H3V21H10M14.5,10.91L19,6.41V10H21V3H14V5H17.59L13.09,9.5L14.5,10.91Z",
   "alert-circle": "M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",
@@ -165,15 +175,15 @@ const zoomIn = (page) =>
 await render(
   [
     { file: "card", type: "printer-card", theme: "light", width: 460, config: {} },
-    { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: { language: "fr" } },
+    { file: "card-dark", type: "printer-card", theme: "dark", width: 460, config: {} },
     { file: "offline", type: "printer-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
     { file: "ipp", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
-    { file: "mini-card", type: "printer-mini-card", theme: "light", width: 460, config: {} },
-    { file: "mini-card-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" } },
-    { file: "mini-offline", type: "printer-mini-card", theme: "light", width: 460, config: {}, hass: { states: offline } },
-    { file: "mini-offline-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, hass: { states: offline } },
+    { file: "mini-card", type: "printer-mini-card", theme: "light", width: 380, config: {} },
+    { file: "mini-card-dark", type: "printer-mini-card", theme: "dark", width: 380, config: {} },
+    { file: "mini-offline", type: "printer-mini-card", theme: "light", width: 380, config: {}, hass: { states: offline } },
+    { file: "mini-offline-dark", type: "printer-mini-card", theme: "dark", width: 380, config: {}, hass: { states: offline } },
     { file: "mini-zoom", type: "printer-mini-card", theme: "light", width: 460, config: {}, after: zoomIn },
-    { file: "mini-zoom-dark", type: "printer-mini-card", theme: "dark", width: 460, config: { language: "fr" }, after: zoomIn },
+    { file: "mini-zoom-dark", type: "printer-mini-card", theme: "dark", width: 460, config: {}, after: zoomIn },
   ],
   { icons, hass }
 );

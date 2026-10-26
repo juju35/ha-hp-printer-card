@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+- The printer icon shown in place of the HP logo uses the shared round badge of the other cards: 16 % tint of the status color, 24 px icon (20 px on the mini card).
+
 ## 2.2.1
 
 ### Changes

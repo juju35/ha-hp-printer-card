@@ -983,8 +983,8 @@ class PrinterCard extends HTMLElement {
       '.logo svg { width: 100%; height: 100%; }' +
       'a.logo:hover { transform: scale(1.08); }' +
       // In place of the HP logo: a printer in a round badge, in the status color.
-      '.logo.mark { display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
-      '.logo.mark ha-icon { --mdc-icon-size: 22px; }' +
+      '.logo.mark { display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--hp-color) 16%, transparent); color: var(--hp-color); }' +
+      '.logo.mark ha-icon { --mdc-icon-size: 24px; }' +
       '.head { display: flex; align-items: center; gap: 12px; }' +
       'a.pic { cursor: pointer; }' +
       'a.pic:hover img { filter: brightness(1.06); }' +
@@ -1050,7 +1050,7 @@ var HP_MINI_STYLES =
   // Compact view, like the Home Connect mini cards: header (logo, name, status, detail button), then picture and details.
   'ha-card.mini { gap: 10px; }' +
   '.mini .logo { width: 32px; height: 32px; }' +
-  '.mini .logo.mark ha-icon { --mdc-icon-size: 18px; }' +
+  '.mini .logo.mark ha-icon { --mdc-icon-size: 20px; }' +
   '.st { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 1px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;' +
     ' white-space: nowrap; background: color-mix(in srgb, var(--hp-color) 15%, transparent); color: var(--hp-color); }' +
   '.st .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hp-color); }' +

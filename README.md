@@ -186,7 +186,7 @@ Mini card:
 | Offline | ![mini card offline](screenshots/mini-offline.png) | ![mini card offline dark](screenshots/mini-offline-dark.png) |
 | Full view | ![mini card full view](screenshots/mini-zoom.png) | ![mini card full view dark](screenshots/mini-zoom-dark.png) |
 
-While a job is printing, the card animates: the preview screen glows as pages advance. It settles to a still card when idle (and honours `prefers-reduced-motion`).
+While a job is printing, the card animates: the preview screen glows as pages advance. It settles to a still card when idle.
 
 ![printer printing animation](screenshots/printing.gif)
 

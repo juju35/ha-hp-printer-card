@@ -977,7 +977,8 @@ class PrinterCard extends HTMLElement {
       ':host { display: block; height: 100%; --hp-color: ' + (color || 'var(--disabled-text-color, #9e9e9e)') + '; }' +
       'ha-card { height: 100%; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 10px; }' +
       '.empty { display: flex; align-items: center; gap: 10px; color: var(--secondary-text-color); }' +
-      '.header { display: flex; align-items: center; gap: 10px; }' +
+      // The body starts 8px under the header (the card gap is 10px between body blocks).
+      '.header { display: flex; align-items: center; gap: 10px; margin-bottom: -2px; }' +
       '.titles { flex: 1; min-width: 0; }' +
       '.logo { flex: none; display: block; width: 40px; height: 40px; line-height: 0; transition: transform 0.2s; }' +
       '.logo svg { width: 100%; height: 100%; }' +

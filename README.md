@@ -186,6 +186,13 @@ Mini card:
 | Offline | ![mini card offline](screenshots/mini-offline.png) | ![mini card offline dark](screenshots/mini-offline-dark.png) |
 | Full view | ![mini card full view](screenshots/mini-zoom.png) | ![mini card full view dark](screenshots/mini-zoom-dark.png) |
 
+While a job is printing, the card animates: the preview screen glows as pages advance. It settles to a still card when idle. The mini card's preview glows the same way.
+
+![printer printing animation](screenshots/printing.gif)
+
+![printer mini card printing animation](screenshots/printing-mini.gif)
+The mini card glowing while a job prints.
+
 ## How it works
 
 The HP Printer integration creates one device per part of the printer (each cartridge, the printhead, the print, scan and copy counters) linked to the main device. The card reads the entity registry to list them, then for each cartridge finds its level, slot, status and warranty date. The printer is shown as **offline** when its status sensor reports `off` (that's what the integration does when the printer stops answering) or is unavailable.
@@ -200,7 +207,7 @@ Set `image` to use a photo of your own model (the lit control panel is only draw
 npm install
 npm run build        # stamps the version of package.json into dist/printer-card.js
 npm run check        # builds and checks the card (run in CI)
-npm run screenshots  # renders the cards with mock HP and IPP printers into screenshots/
+npm run screenshots  # renders the cards with mock HP and IPP printers into screenshots/ (and printing.gif, printing-mini.gif, needs ffmpeg)
 ```
 
 `dist/` is not committed: `npm run build` creates it locally, CI builds it on every push, and the release workflow attaches the built file to the release, which is where HACS downloads it from.

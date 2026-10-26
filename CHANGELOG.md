@@ -1,7 +1,6 @@
 # Changelog
 
-## Unreleased
-
+## 2.2.2
 ### Changes
 - The printer icon shown in place of the HP logo uses the shared round badge of the other cards: 16 % tint of the status color, 24 px icon (20 px on the mini card).
 - The status pill (Ready, Printing, Offline…) sits in the header row, right of the name (before the detail button on the mini card's full view), instead of on its own line next to the picture; the ink / alert / ePrint chips stay next to the picture.

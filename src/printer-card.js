@@ -905,7 +905,7 @@ class PrinterCard extends HTMLElement {
     if (focused) this.shadowRoot.querySelector(`a.${focused}`)?.focus({ preventScroll: true });
   }
 
-  // The full card: header (picture, name, status, chips), ink levels and alerts.
+  // The full card: header (logo, name, status), picture with its chips, ink levels and alerts.
   _full(r, v) {
     var c = this._config;
     var offline = v.offline, alerts = v.alerts;
@@ -935,12 +935,11 @@ class PrinterCard extends HTMLElement {
         hpEsc(this._t('pages', { n: Number.isNaN(n) ? this._val(r.total_pages) : n.toLocaleString(this._lang()) })) + '</div>';
     }
 
-    // Like the Home Connect cards: logo and name on top, then the picture with the status and its chips.
+    // Like the Home Connect cards: logo, name and status pill on top, then the picture with the chips.
     var head = '<div class="header">' + v.logoHtml +
-      '<div class="titles"><div class="name">' + hpEsc(v.name) + '</div></div>' + this._corner() + '</div>' +
+      '<div class="titles"><div class="name">' + hpEsc(v.name) + '</div></div>' + this._statusPill(v) + this._corner() + '</div>' +
       '<div class="head">' + v.imageHtml +
       '<div class="meta">' +
-        this._statusPill(v) +
         (chips.length ? `<div class="chips">${chips.join('')}</div>` : '') +
         sub +
       '</div></div>';
@@ -948,7 +947,8 @@ class PrinterCard extends HTMLElement {
     var inksHtml = '';
     var cartridges = r.inks.filter((i) => !i.printhead && i.level);
     if (!offline && c.show_inks && cartridges.length) {
-      inksHtml = '<div class="section"><div class="section-title">' + this._t(cartridges.every((i) => i.toner) ? 'toner' : 'inks') + '</div><div class="inks" style="--n:' + cartridges.length + '">' +
+      var toner = cartridges.every((i) => i.toner);
+      inksHtml = '<div class="section"><div class="section-title"><ha-icon icon="' + (toner ? 'mdi:invert-colors' : 'mdi:water-outline') + '"></ha-icon>' + this._t(toner ? 'toner' : 'inks') + '</div><div class="inks" style="--n:' + cartridges.length + '">' +
         cartridges.map((ink) => {
           var k = this._inkInfo(ink);
           return '<div class="ink' + (k.low ? ' low' : '') + (k.crit ? ' crit' : '') + (k.bad ? ' bad' : '') + '" title="' + hpEsc(k.title) + '">' +
@@ -962,7 +962,7 @@ class PrinterCard extends HTMLElement {
 
     var alertsHtml = '';
     if (!offline && c.show_alerts) {
-      alertsHtml = '<div class="section"><div class="section-title">' + this._t('alerts') + '</div>' +
+      alertsHtml = '<div class="section"><div class="section-title"><ha-icon icon="mdi:alert-outline"></ha-icon>' + this._t('alerts') + '</div>' +
         (alerts.length
           ? `<div class="alerts">${alerts.map((a) => `<div class="alert ${a.level}"><ha-icon icon="${a.icon}"></ha-icon><span>${hpEsc(hpCap(a.text))}</span></div>`).join('')}</div>`
           : `<div class="alert ok"><ha-icon icon="mdi:check-circle"></ha-icon><span>${this._t('no_alerts')}</span></div>`) +
@@ -998,7 +998,7 @@ class PrinterCard extends HTMLElement {
       '.pic.off .screen { display: none; }' +
       '.meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }' +
       '.name { font-size: 16px; font-weight: 500; color: var(--primary-text-color); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-      '.status { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12px; font-weight: 500; color: var(--hp-color);' +
+      '.status { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--hp-color);' +
         ' padding: 2px 10px 2px 6px; border-radius: 12px; background: color-mix(in srgb, var(--hp-color) 15%, transparent); }' +
       '.status ha-icon { --mdc-icon-size: 14px; }' +
       '.chips { display: flex; flex-wrap: wrap; gap: 6px; }' +
@@ -1012,7 +1012,9 @@ class PrinterCard extends HTMLElement {
       '.sub ha-icon { --mdc-icon-size: 15px; }' +
       '.muted { color: var(--secondary-text-color); opacity: 0.85; }' +
       '.section { display: flex; flex-direction: column; gap: 6px; }' +
-      '.section-title { font-size: 12px; font-weight: 500; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 0.04em; }' +
+      '.section-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; text-transform: uppercase;' +
+        ' letter-spacing: .04em; color: var(--secondary-text-color); }' +
+      '.section-title ha-icon { --mdc-icon-size: 16px; }' +
       '.inks { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 8px; }' +
       '.ink { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }' +
       '.tank { position: relative; width: 100%; max-width: 40px; height: 44px; border-radius: 8px; overflow: hidden;' +

@@ -38,7 +38,7 @@ Pick the printer, the card finds all its entities by itself. A compact **Printer
 - **Detail button** on the mini card (top right): shows the full card in place, with everything it shows; the button, or a click anywhere else, goes back to the compact view. `zoom: false` removes it
 - Automatic entity discovery from the device (works with English or French entity IDs), status, IPP sensor, ePrint sensors and page counter can be overridden
 - Visual editor in the dashboard UI (no YAML needed)
-- English and French, follows the Home Assistant language
+- English, French and German, follows the Home Assistant language
 - Light and dark theme compatible
 - Single file, no dependencies, HACS-ready
 
@@ -142,7 +142,7 @@ entities:
 | `admin_url` | ❌ | Detected | Page opened when clicking the printer picture, e.g. `http://printer.local`. By default, the device's configuration URL or the address of its IPP sensor |
 | `picture` | ❌ | `auto` | Picture: `auto`, `officejet`, `laserjet`, `deskjet`, `smart_tank` or `generic` (see below) |
 | `image` | ❌ | — | URL of your own printer picture, e.g. `/local/printer.png`; replaces `picture` |
-| `language` | ❌ | Auto | Force language: `fr` or `en` (auto-detects from HA settings) |
+| `language` | ❌ | Auto | Force language: `fr`, `en` or `de` (auto-detects from HA settings) |
 | `entities` | ❌ | Auto | Override detected entities (see below) |
 | `zoom` | ❌ | `true` | Mini card only: detail button in the top right corner, showing the full card; a click on it or anywhere else goes back to the compact view. `false` removes it |
 
@@ -226,6 +226,7 @@ The card auto-detects the language from your Home Assistant settings. Currently 
 |---|---|
 | English | `en` |
 | Français | `fr` |
+| Deutsch | `de` |
 
 Contributions for additional languages are welcome!
 

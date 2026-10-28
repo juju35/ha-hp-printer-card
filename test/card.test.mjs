@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadCard } from "./load.mjs";
 
-const { PrinterCard, PrinterCardEditor, PrinterMiniCard, PrinterMiniCardEditor, hpHpInks, hpEsc, hpFill, hpPictureFor, customElements, listeners } = loadCard("printer-card.js", [
+const { PrinterCard, PrinterCardEditor, PrinterMiniCard, PrinterMiniCardEditor, hpHpInks, hpEsc, hpFill, hpPictureFor, hpSubDevices, hpFindIppSensor, customElements, listeners } = loadCard("printer-card.js", [
   "PrinterCard",
   "PrinterCardEditor",
   "PrinterMiniCard",
@@ -11,6 +11,8 @@ const { PrinterCard, PrinterCardEditor, PrinterMiniCard, PrinterMiniCardEditor, 
   "hpHpInks",
   "hpEsc",
   "hpFill",
+  "hpSubDevices",
+  "hpFindIppSensor",
 ]);
 
 const st = (state, attributes = {}, extra = {}) => ({ state, attributes, ...extra });
@@ -107,6 +109,31 @@ for (const [label, first] of [["absent", undefined], ["unavailable", st("unavail
     assert.match(card.shadowRoot.innerHTML, /Paper tray empty/);
   });
 }
+
+// Two printers of the same model: the IPP sensor must belong to the right unit.
+test("the IPP sensor of another printer of the same model is not attached", () => {
+  const hass = withIpp(mockHass(), IPP_READY);
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://printer-2.local/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://PRINTER.local/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+test("without any host to compare, the same-model IPP sensor is still attached", () => {
+  assert.equal(hpFindIppSensor(withIpp(mockHass(), IPP_READY), "p"), "sensor.ipp_printer");
+});
+
+test("a second printer named after the first is not absorbed as a sub-device", () => {
+  const hass = mockHass();
+  hass.devices.p2 = { name: "OfficeJet 2", manufacturer: "HP" };
+  hass.states["sensor.printer_2_status"] = st("ready", { options: STATUS_OPTIONS });
+  hass.entities["sensor.printer_2_status"] = { entity_id: "sensor.printer_2_status", device_id: "p2" };
+  // Its cartridge sub-devices (linked by via_device_id) stay with it too.
+  hass.devices.p2_ink = { name: "OfficeJet 2 black cartridge", manufacturer: "HP", via_device_id: "p2" };
+  // A plain accessory without via_device_id is still found by the name fallback.
+  hass.devices.p_scanner = { name: "OfficeJet Scanner", manufacturer: "HP" };
+  assert.deepEqual([...hpSubDevices(hass, "p")].sort(), ["ink_black", "ink_cyan", "ink_magenta", "ink_yellow", "p_counters", "p_scanner"]);
+});
 
 test("a printer without IPP sensor does not redo the whole discovery on each update", () => {
   const hass = mockHass();

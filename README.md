@@ -57,8 +57,8 @@ Click the button below to add the repository directly:
 
 Or manually:
 
-1. Open HACS → **Frontend** → **⋮** → **Custom repositories**
-2. Add `https://github.com/juju35/ha-printer-card` — Category: **Dashboard** (Lovelace)
+1. Open HACS → **⋮** → **Custom repositories**
+2. Add `https://github.com/juju35/ha-printer-card` — Type: **Dashboard**
 3. Search for **Printer Card** and install it
 4. Clear your browser cache and refresh
 
@@ -174,13 +174,13 @@ The control panel of each picture lights up in the status color.
 
 ## Screenshots
 
-| Light | Dark (French) | Printer offline | IPP laser printer |
+| Light | Dark | Printer offline | IPP laser printer |
 |---|---|---|---|
 | ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) | ![ipp](screenshots/ipp.png) |
 
 Mini card:
 
-| | Light | Dark (French) |
+| | Light | Dark |
 |---|---|---|
 | Compact | ![mini card](screenshots/mini-card.png) | ![mini card dark](screenshots/mini-card-dark.png) |
 | Offline | ![mini card offline](screenshots/mini-offline.png) | ![mini card offline dark](screenshots/mini-offline-dark.png) |

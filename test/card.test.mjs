@@ -170,19 +170,23 @@ test("editor labels follow the language option", () => {
   assert.equal(label({ language: "en" }, "fr"), "Name");
 });
 
-// A focused link (picture or HP logo) keeps the keyboard focus when innerHTML rebuilds the card.
-for (const cls of ["pic", "logo"]) {
-  test(`the focused ${cls} link keeps the focus after a re-render`, () => {
+// A focused control (picture link, HP logo, mini-card detail button) keeps the keyboard
+// focus when innerHTML rebuilds the card.
+const fakeEl = (tag, classes) => ({
+  tagName: tag.toUpperCase(),
+  matches: (sel) => classes.split(" ").some((k) => sel === `${tag}.${k}`),
+});
+for (const [tag, cls, Card] of [["a", "pic", PrinterCard], ["a", "logo", PrinterCard], ["button", "zoom", PrinterMiniCard]]) {
+  test(`the focused ${cls} ${tag === "a" ? "link" : "button"} keeps the focus after a re-render`, () => {
     const hass = mockHass();
-    const card = render(hass, { device_id: "p", admin_url: "http://printer.local", show_logo: true });
+    const card = render(hass, { device_id: "p", admin_url: "http://printer.local", show_logo: true }, Card);
     const root = card.shadowRoot;
-    const link = (c) => ({ tagName: "A", classList: { contains: (k) => c.split(" ").includes(k) } });
-    root.activeElement = link(`${cls} busy`);
+    root.activeElement = fakeEl(tag, `${cls} busy`);
     const focused = [];
-    root.querySelector = (sel) => (sel === `a.${cls}` ? { focus: (o) => focused.push([sel, o]) } : null);
+    root.querySelector = (sel) => (sel === `${tag}.${cls}` ? { focus: (o) => focused.push([sel, o]), addEventListener() {} } : null);
     card.hass = { ...hass, states: { ...hass.states, "sensor.printer_status": st("processing", { options: STATUS_OPTIONS }) } };
     assert.match(root.innerHTML, /Printing|processing/i);
-    assert.deepEqual(JSON.parse(JSON.stringify(focused)), [[`a.${cls}`, { preventScroll: true }]]);
+    assert.deepEqual(JSON.parse(JSON.stringify(focused)), [[`${tag}.${cls}`, { preventScroll: true }]]);
   });
 }
 

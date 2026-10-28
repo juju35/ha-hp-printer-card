@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.4
+### Changes
+- Added german language
+
 ## 2.2.3
 
 ### Fixes

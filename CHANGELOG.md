@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.2.3
+
+### Fixes
+- Two printers of the same model: the card no longer picks up the other printer's IPP sensor (paper / cover alerts of the wrong device); the IPP sensor must now share the printer's host when both are known.
+- A second printer named like the first ("OfficeJet 2" next to "OfficeJet") is no longer mixed into the first one's cartridges and sensors.
+- Mini card: keyboard focus on the detail button is kept when the card refreshes.
+- A printhead reported only through its status ("Printhead…", "Tête…") is recognised whatever its case.
+
+### Maintenance
+- README: printing animation GIFs, refreshed screenshots, "Dark" captions, current HACS install steps.
+- CI: hardened apt handling and fork guard in the screenshots workflow, release gated on the tests, unused ruff tooling removed, jscpd annotation step no longer crashes without a report.
+
 ## 2.2.2
 ### Changes
 - The printer icon shown in place of the HP logo uses the shared round badge of the other cards: 16 % tint of the status color, 24 px icon (20 px on the mini card).

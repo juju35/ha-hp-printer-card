@@ -426,7 +426,20 @@ function hpSubDevices(hass, mainId) {
     if (id === mainId) return false;
     var d = hass.devices[id];
     if (d.via_device_id === mainId) return true;
+    // Name-prefix fallback: never absorb a device linked to another parent, nor another
+    // printer ("OfficeJet 2" when the main one is "OfficeJet").
+    if (d.via_device_id || hpIsPrinterDevice(hass, id)) return false;
     return !!mainName && main && d.manufacturer === main.manufacturer && String(d.name || '').indexOf(`${String(main.name || '')} `) === 0;
+  });
+}
+
+// A device carrying its own printer status sensor (HP Printer or IPP) is a printer, not a sub-device.
+function hpIsPrinterDevice(hass, id) {
+  if (!hass?.entities) return false;
+  return hpDeviceSensors(hass.entities).some((e) => {
+    if (e.device_id !== id) return false;
+    var s = hass.states[e.entity_id];
+    return hpIsHpStatus(s) || hpIsIppStatus(s);
   });
 }
 
@@ -507,11 +520,36 @@ function hpSensorsByModel(hass) {
   return cached.byModel;
 }
 
+// Host part of a URL (http(s), ipp(s)…), lowercased; '' when there is none.
+function hpUrlHost(url) {
+  var m = /^[a-z][a-z0-9+.-]*:\/\/(\[[^\]]+\]|[^/:?#]+)/i.exec(String(url || '').trim());
+  return m ? m[1].toLowerCase() : '';
+}
+
+// Host advertised by an IPP printer sensor, from its uri_supported attribute.
+function hpIppHost(s) {
+  var uris = s?.attributes.uri_supported;
+  uris = Array.isArray(uris) ? uris : String(uris || '').split(',');
+  for (var i = 0; i < uris.length; i++) {
+    var h = hpUrlHost(uris[i]);
+    if (h) return h;
+  }
+  return '';
+}
+
 function hpFindIppSensor(hass, mainId) {
   var main = hass.devices?.[mainId];
   if (!main?.model || !hass.entities) return undefined;
-  var hit = (hpSensorsByModel(hass).get(main.model) || []).find((e) =>
-    e.device_id !== mainId && hpIsIppStatus(hass.states[e.entity_id]));
+  // Same model is not enough with two identical printers: when both sides expose a host
+  // (configuration_url vs uri_supported), they must match before the sensor is attached.
+  var mainHost = hpUrlHost(main.configuration_url);
+  var hit = (hpSensorsByModel(hass).get(main.model) || []).find((e) => {
+    if (e.device_id === mainId) return false;
+    var s = hass.states[e.entity_id];
+    if (!hpIsIppStatus(s)) return false;
+    var host = hpIppHost(s) || hpUrlHost(hass.devices?.[e.device_id]?.configuration_url);
+    return !mainHost || !host || host === mainHost;
+  });
   return hit ? hit.entity_id : undefined;
 }
 

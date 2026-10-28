@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.0
+
+### Changes
+- German translation (card and visual editor), contributed by domwu0001.
+
 ## 2.2.3
 
 ### Fixes

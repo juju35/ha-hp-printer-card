@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0
+
+### Changes
+- Spanish translation (card and visual editor); `es` added to the editor's language selector.
+
+### Maintenance
+- Test checking that the German and Spanish strings have exactly the English keys and placeholders.
+
 ## 2.3.0
 
 ### Changes

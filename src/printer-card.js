@@ -321,6 +321,9 @@ var HP_INK_COLORS = {
   ink: '#9e9e9e',
 };
 
+// Display order of the cartridges, when the printer does not report their station.
+var HP_INK_ORDER = { black: 0, cyan: 1, magenta: 2, yellow: 3, tricolor: 4, ink: 5 };
+
 function hpInkColor(text) {
   var t = String(text || '').toLowerCase().replace(/[^a-z]/g, '');
   if (/cyanmagentayellow|tricolor|tricolour|couleur/.test(t)) return 'tricolor';
@@ -340,7 +343,7 @@ function hpCartridgeOk(state) {
 function hpCartridgeProblem(state) {
   var s = String(state || '').toLowerCase();
   if (/missing|absent/.test(s)) return 'cs_missing';
-  if (/empty|depleted|veryLow/i.test(s)) return 'cs_empty';
+  if (/empty|depleted|verylow/.test(s)) return 'cs_empty';
   if (/counterfeit/.test(s)) return 'cs_counterfeit';
   if (/nongenuine|nonhp|non_hp|refill/.test(s)) return 'cs_nongenuine';
   if (/incompatible|wrong/.test(s)) return 'cs_incompatible';
@@ -462,7 +465,7 @@ function hpHpInks(hass, subIds) {
     });
     var type = typeId ? hass.states[typeId].state : '';
     var status = hpPick(list, hass, (eid, s) => eid.indexOf('binary_sensor.') === 0 && s.attributes.state !== undefined && /(statut|status|state|etat)$/.test(eid));
-    if (!level && type !== 'printhead' && !(status && /printhead|tete/.test(status))) return;
+    if (!level && type !== 'printhead' && !(status && /printhead|tete/i.test(status))) return;
     var name = hpDeviceName(hass, id);
     inks.push({
       device: id,
@@ -476,12 +479,11 @@ function hpHpInks(hass, subIds) {
       pages_left: hpPick(list, hass, (_eid, s) => hpUnit(s) === 'pages' && s.attributes.state_class === 'measurement'),
     });
   });
-  var order = { black: 0, cyan: 1, magenta: 2, yellow: 3, tricolor: 4, ink: 5 };
   return inks.sort((a, b) => {
     var sa = a.station ? Number(hass.states[a.station].state) : NaN;
     var sb = b.station ? Number(hass.states[b.station].state) : NaN;
     if (!Number.isNaN(sa) && !Number.isNaN(sb) && sa !== sb) return sa - sb;
-    return (order[a.color] ?? 9) - (order[b.color] ?? 9);
+    return (HP_INK_ORDER[a.color] ?? 9) - (HP_INK_ORDER[b.color] ?? 9);
   });
 }
 
@@ -494,10 +496,7 @@ function hpIppInks(hass, list) {
     var s = hass.states[e.entity_id];
     return { name: s.attributes.friendly_name, color: hpInkColor(e.entity_id) || hpInkColor(s.attributes.friendly_name) || 'ink',
       level: e.entity_id, low: s.attributes.marker_low_level, toner: /toner/i.test(String(s.attributes.marker_type || '')) };
-  }).sort((a, b) => {
-    var order = { black: 0, cyan: 1, magenta: 2, yellow: 3, tricolor: 4, ink: 5 };
-    return order[a.color] - order[b.color];
-  });
+  }).sort((a, b) => HP_INK_ORDER[a.color] - HP_INK_ORDER[b.color]);
 }
 
 // IPP printer sensor matching a HP Printer device (same model), for paper/cover alerts.
@@ -583,10 +582,10 @@ function hpInDialog(ev) {
 }
 
 // ── Card ─────────────────────────────────────────────────────────────────────
-// The card's focusable links, by the class that identifies each across renders.
-var HP_FOCUSABLE = ['pic', 'logo'];
+// The card's focusable controls, by the selector that identifies each across renders.
+var HP_FOCUSABLE = ['a.pic', 'a.logo', 'button.zoom'];
 function hpFocusKey(el) {
-  return el?.tagName === 'A' && el.classList ? HP_FOCUSABLE.find((k) => el.classList.contains(k)) || '' : '';
+  return el?.matches ? HP_FOCUSABLE.find((sel) => el.matches(sel)) || '' : '';
 }
 
 var HP_DEFAULTS = {
@@ -939,8 +938,8 @@ class PrinterCard extends HTMLElement {
     var focused = hpFocusKey(this.shadowRoot.activeElement);
     var classes = [v.offline ? 'offline' : '', cls || ''].filter(Boolean).join(' ');
     this.shadowRoot.innerHTML = `${this._styles(v.color)}<ha-card class="${classes}">${inner}</ha-card>`;
-    // innerHTML replaced the focused link: focus its counterpart so keyboard navigation keeps its place.
-    if (focused) this.shadowRoot.querySelector(`a.${focused}`)?.focus({ preventScroll: true });
+    // innerHTML replaced the focused control: focus its counterpart so keyboard navigation keeps its place.
+    if (focused) this.shadowRoot.querySelector(focused)?.focus({ preventScroll: true });
   }
 
   // The full card: header (logo, name, status), picture with its chips, ink levels and alerts.

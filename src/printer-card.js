@@ -719,10 +719,11 @@ function hpSensorsByModel(hass) {
   return cached.byModel;
 }
 
-// Host part of a URL (http(s), ipp(s)…), lowercased; '' when there is none.
+// Host part of a URL (http(s), ipp(s)…), lowercased, without the final dot of a fully qualified
+// name (HP1234.local. → hp1234.local); '' when there is none.
 function hpUrlHost(url) {
   var m = /^[a-z][a-z0-9+.-]*:\/\/(\[[^\]]+\]|[^/:?#]+)/i.exec(String(url || '').trim());
-  return m ? m[1].toLowerCase() : '';
+  return m ? m[1].toLowerCase().replace(/\.$/, '') : '';
 }
 
 // Hosts advertised by an IPP printer sensor (every uri_supported entry: IP address, mDNS name…)
@@ -739,19 +740,47 @@ function hpIppHosts(hass, e) {
   return out;
 }
 
-// Form of a host: 'v4' or 'v6' (in brackets) address, or 'name'.
+// Form of a host: 'v4' or 'v6' (in brackets) address, 'mdns' name (*.local), 'dns' name (other
+// domain) or 'bare' name (no domain).
 function hpHostForm(h) {
   if (/^\[.*\]$/.test(h)) return 'v6';
-  return /^\d{1,3}(\.\d{1,3}){3}$/.test(h) ? 'v4' : 'name';
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return 'v4';
+  if (h.indexOf('.') < 0) return 'bare';
+  return /\.local$/.test(h) ? 'mdns' : 'dns';
 }
 
-// Same host: identical, or the same name with and without its domain (hp1234 / hp1234.local).
+// Two hosts can tell two printers apart only when written in the same form. A mDNS name and a DNS
+// name are not comparable (HPABC123.local and officejet.lan can be the same printer); a name
+// without domain is comparable with both.
+function hpComparable(a, b) {
+  var fa = hpHostForm(a);
+  var fb = hpHostForm(b);
+  if (fa === fb) return true;
+  var names = ['bare', 'mdns', 'dns'];
+  return (fa === 'bare' && names.indexOf(fb) >= 0) || (fb === 'bare' && names.indexOf(fa) >= 0);
+}
+
+// Same host: identical, or the same name with and without its domain (hp1234 / hp1234.local), or
+// under the mDNS and a DNS domain (hp1234.local / hp1234.lan). Two DNS names must be identical
+// (printer.office1.lan is not printer.office2.lan).
 function hpSameHost(a, b) {
   if (a === b) return true;
-  if (hpHostForm(a) !== 'name' || hpHostForm(b) !== 'name') return false;
+  var fa = hpHostForm(a);
+  var fb = hpHostForm(b);
+  if (fa === 'v4' || fa === 'v6' || fb === 'v4' || fb === 'v6' || (fa === 'dns' && fb === 'dns')) return false;
   return a.split('.')[0] === b.split('.')[0];
 }
 
+// What the hosts say about an IPP sensor for the HP device's host: 'match' (a host is the same),
+// 'mismatch' (hosts of the same form exist and all differ: another printer) or 'unknown' (a side
+// has no host, or no host is comparable).
+function hpHostVerdict(mainHost, hosts) {
+  if (!mainHost || !hosts.length) return 'unknown';
+  if (hosts.some((h) => hpSameHost(h, mainHost))) return 'match';
+  return hosts.some((h) => hpComparable(h, mainHost)) ? 'mismatch' : 'unknown';
+}
+
+// Reference cases: test/ipp-pairing.test.mjs (every case must keep passing).
 function hpFindIppSensor(hass, mainId) {
   var main = hass.devices?.[mainId];
   if (!main?.model || !hass.entities) return undefined;
@@ -759,23 +788,20 @@ function hpFindIppSensor(hass, mainId) {
   var candidates = sensors.filter((e) => e.device_id !== mainId && hpIsIppStatus(hass.states[e.entity_id]));
   if (!candidates.length) return undefined;
   var mainHost = hpUrlHost(main.configuration_url);
-  // With a single IPP sensor and a single HP Printer device of this model, hosts written in different
-  // forms (the IP address on one side, the mDNS name on the other, which is common; IPv4 against IPv6) do not prevent
-  // the pairing; hosts of the same form that differ still do, since A may be followed by HP Printer
-  // only and B, of the same model, by IPP only.
+  var hosts = candidates.map((e) => hpIppHosts(hass, e));
+  var verdicts = hosts.map((h) => hpHostVerdict(mainHost, h));
+  // A matching host always wins, whatever the order of the candidates.
+  var hit = verdicts.indexOf('match');
+  if (hit >= 0) return candidates[hit].entity_id;
   var printers = sensors.filter((e) => hpIsHpStatus(hass.states[e.entity_id]))
     .map((e) => e.device_id).filter((id, i, a) => a.indexOf(id) === i);
-  if (candidates.length === 1 && printers.length <= 1) {
-    if (!mainHost) return candidates[0].entity_id;
-    var comparable = hpIppHosts(hass, candidates[0]).filter((h) => hpHostForm(h) === hpHostForm(mainHost));
-    return !comparable.length || comparable.some((h) => hpSameHost(h, mainHost)) ? candidates[0].entity_id : undefined;
-  }
-  // Otherwise, when both sides expose a host, one of them must match.
-  var hit = candidates.find((e) => {
-    var hosts = hpIppHosts(hass, e);
-    return !mainHost || !hosts.length || hosts.some((h) => hpSameHost(h, mainHost));
-  });
-  return hit ? hit.entity_id : undefined;
+  // A single IPP sensor and a single HP Printer device of this model: paired unless hosts of the same
+  // form differ (A may be followed by HP Printer only and B, of the same model, by IPP only).
+  if (candidates.length === 1 && printers.length <= 1) return verdicts[0] === 'unknown' ? candidates[0].entity_id : undefined;
+  // Identical printers: hosts of different forms cannot tell them apart; only a side without any host
+  // is accepted, as before.
+  var free = candidates.findIndex((_e, i) => !mainHost || !hosts[i].length);
+  return free >= 0 ? candidates[free].entity_id : undefined;
 }
 
 // Printer web page: the device's configuration URL, else the host of the IPP sensor's URI.

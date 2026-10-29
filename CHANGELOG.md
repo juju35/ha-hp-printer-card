@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.3
+
+### Fixes
+- The IPP sensor is attached again when HP Printer uses a DNS name (`officejet.lan`) and the IPP sensor announces the printer's `.local` name and IP address: paper and cover alerts were lost since 2.4.2. A `.local` name and another DNS name are no longer compared as if they could tell two printers apart.
+- With two identical printers, an IPP sensor whose address matches now always wins over one that announces no address.
+- Two DNS names that only share their first part (`printer.office1.lan` / `printer.office2.lan`) are no longer taken for the same printer.
+
+### Maintenance
+- Reference table of IPP pairing cases (same host, IP vs `.local`, DNS vs mDNS, IPv4 vs IPv6, different hosts, identical printers, no host, IPP sensor absent or unavailable) in the test suite.
+
 ## 2.4.2
 
 ### Fixes

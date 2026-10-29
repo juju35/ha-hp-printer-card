@@ -52,6 +52,9 @@ var HpI18n = {
     ipp_input_tray_missing: 'Bac à papier absent',
     ipp_output_area_full: 'Bac de sortie plein',
     ipp_marker_supply_empty: 'Cartouche vide',
+    ipp_media_needed: 'Chargez du papier',
+    ipp_toner_empty: 'Toner vide',
+    ipp_marker_supply_missing: 'Cartouche absente',
     ipp_offline: 'Imprimante hors ligne',
     ed_device: 'Imprimante',
     ed_device_helper: 'Appareil de l\'intégration HP Printer ou IPP (toutes marques)',
@@ -145,6 +148,9 @@ var HpI18n = {
     ipp_input_tray_missing: 'Paper tray missing',
     ipp_output_area_full: 'Output tray full',
     ipp_marker_supply_empty: 'Cartridge empty',
+    ipp_media_needed: 'Load paper',
+    ipp_toner_empty: 'Toner empty',
+    ipp_marker_supply_missing: 'Cartridge missing',
     ipp_offline: 'Printer offline',
     ed_device: 'Printer',
     ed_device_helper: 'Device from the HP Printer or IPP integration (any brand)',
@@ -213,7 +219,7 @@ var HpI18n = {
     c_cyan: 'Cyan',
     c_magenta: 'Magenta',
     c_yellow: 'Gelb',
-    c_tricolor: 'Dreifarbig',
+    c_tricolor: 'Farbe',
     c_ink: 'Tinte',
     printhead: 'Druckkopf',
     al_low: 'Wenig Tinte: {c} ({p} %)',
@@ -238,6 +244,9 @@ var HpI18n = {
     ipp_input_tray_missing: 'Papierfach fehlt',
     ipp_output_area_full: 'Papierausgabefach voll',
     ipp_marker_supply_empty: 'Patrone leer',
+    ipp_media_needed: 'Papier einlegen',
+    ipp_toner_empty: 'Toner leer',
+    ipp_marker_supply_missing: 'Patrone fehlt',
     ipp_offline: 'Drucker offline',
     ed_device: 'Drucker',
     ed_device_helper: 'Gerät aus der HP-Drucker- oder IPP-Integration (beliebige Marke)',
@@ -294,7 +303,7 @@ var HpI18n = {
     st_offline: 'Desconectada',
     st_unknown: 'Estado desconocido',
     offline_text: 'La impresora está apagada o no se puede acceder a ella.',
-    last_seen: 'Visto por última vez {t}',
+    last_seen: 'Vista por última vez {t}',
     inks: 'Niveles de tinta',
     alerts: 'Alertas',
     no_alerts: 'Sin alertas',
@@ -331,6 +340,9 @@ var HpI18n = {
     ipp_input_tray_missing: 'Falta la bandeja de papel',
     ipp_output_area_full: 'Bandeja de salida llena',
     ipp_marker_supply_empty: 'Cartucho vacío',
+    ipp_media_needed: 'Cargue papel',
+    ipp_toner_empty: 'Tóner vacío',
+    ipp_marker_supply_missing: 'Falta el cartucho',
     ipp_offline: 'Impresora desconectada',
     ed_device: 'Impresora',
     ed_device_helper: 'Dispositivo de la integración HP Printer o IPP (cualquier marca)',
@@ -616,9 +628,11 @@ function hpSubDevices(hass, mainId) {
     var d = hass.devices[id];
     if (d.via_device_id === mainId) return true;
     // Name-prefix fallback: never absorb a device linked to another parent, nor another
-    // printer ("OfficeJet 2" when the main one is "OfficeJet").
-    if (d.via_device_id || hpIsPrinterDevice(hass, id)) return false;
-    return !!mainName && main && d.manufacturer === main.manufacturer && String(d.name || '').indexOf(`${String(main.name || '')} `) === 0;
+    // printer ("OfficeJet 2" when the main one is "OfficeJet"). The cheap manufacturer / name
+    // test comes first: the printer check scans every sensor, so it only runs on the few matches.
+    if (d.via_device_id || !mainName || !main || d.manufacturer !== main.manufacturer) return false;
+    if (String(d.name || '').indexOf(`${String(main.name || '')} `) !== 0) return false;
+    return !hpIsPrinterDevice(hass, id);
   });
 }
 
@@ -711,29 +725,37 @@ function hpUrlHost(url) {
   return m ? m[1].toLowerCase() : '';
 }
 
-// Host advertised by an IPP printer sensor, from its uri_supported attribute.
-function hpIppHost(s) {
-  var uris = s?.attributes.uri_supported;
-  uris = Array.isArray(uris) ? uris : String(uris || '').split(',');
-  for (var i = 0; i < uris.length; i++) {
-    var h = hpUrlHost(uris[i]);
-    if (h) return h;
-  }
-  return '';
+// Hosts advertised by an IPP printer sensor (every uri_supported entry: IP address, mDNS name…)
+// and by its device's configuration URL.
+function hpIppHosts(hass, e) {
+  var uris = hass.states[e.entity_id]?.attributes.uri_supported;
+  uris = Array.isArray(uris) ? uris.slice() : String(uris || '').split(',');
+  uris.push(hass.devices?.[e.device_id]?.configuration_url);
+  var out = [];
+  uris.forEach((u) => {
+    var h = hpUrlHost(u);
+    if (h && out.indexOf(h) < 0) out.push(h);
+  });
+  return out;
 }
 
 function hpFindIppSensor(hass, mainId) {
   var main = hass.devices?.[mainId];
   if (!main?.model || !hass.entities) return undefined;
-  // Same model is not enough with two identical printers: when both sides expose a host
-  // (configuration_url vs uri_supported), they must match before the sensor is attached.
+  var sensors = hpSensorsByModel(hass).get(main.model) || [];
+  var candidates = sensors.filter((e) => e.device_id !== mainId && hpIsIppStatus(hass.states[e.entity_id]));
+  if (!candidates.length) return undefined;
+  // The host check only tells identical printers apart: with a single IPP sensor and a single
+  // HP Printer device of this model, the pair is unambiguous whatever host each side reports
+  // (the IP address on one side and the mDNS name on the other is common).
+  var printers = sensors.filter((e) => hpIsHpStatus(hass.states[e.entity_id]))
+    .map((e) => e.device_id).filter((id, i, a) => a.indexOf(id) === i);
+  if (candidates.length === 1 && printers.length <= 1) return candidates[0].entity_id;
+  // Otherwise, when both sides expose a host, one of them must match.
   var mainHost = hpUrlHost(main.configuration_url);
-  var hit = (hpSensorsByModel(hass).get(main.model) || []).find((e) => {
-    if (e.device_id === mainId) return false;
-    var s = hass.states[e.entity_id];
-    if (!hpIsIppStatus(s)) return false;
-    var host = hpIppHost(s) || hpUrlHost(hass.devices?.[e.device_id]?.configuration_url);
-    return !mainHost || !host || host === mainHost;
+  var hit = candidates.find((e) => {
+    var hosts = hpIppHosts(hass, e);
+    return !mainHost || !hosts.length || hosts.indexOf(mainHost) >= 0;
   });
   return hit ? hit.entity_id : undefined;
 }
@@ -841,7 +863,7 @@ class PrinterCard extends HTMLElement {
       return m.r;
     }
     var r = this._discover();
-    var devs = [r.deviceId].concat(r.kind === 'hp' ? hpSubDevices(hass, r.deviceId) : []);
+    var devs = [r.deviceId].concat(r.kind === 'hp' ? r.subs || [] : []);
     this._memo = r.status && hass.states[r.status]
       ? { entities: hass.entities, devices: hass.devices, config: this._config, devs: devs, avail: this._availSig(devs), r: r }
       : null;
@@ -867,6 +889,7 @@ class PrinterCard extends HTMLElement {
 
     if (status && hpIsHpStatus(hass.states[status])) {
       var subs = hpSubDevices(hass, deviceId);
+      r.subs = subs;
       r.inks = hpHpInks(hass, subs);
       // ePrint (HP cloud printing): "ePrint status" (connectivity) and "ePrint registered" binary sensors.
       var ep = main.filter((e) => e.entity_id.indexOf('binary_sensor.') === 0 && /eprint/.test(e.entity_id));
@@ -947,9 +970,11 @@ class PrinterCard extends HTMLElement {
     return this._t(`c_${ink.color}`);
   }
 
-  // Label used inside a sentence: lower case in French ("encre jaune"), as is in English.
+  // Label used inside a sentence: lower case in French and Spanish ("encre jaune", "cartucho negro"),
+  // as is in English and German (nouns keep their capital).
   _inkWord(ink) {
     var l = ink.printhead ? this._t('printhead') : this._inkLabel(ink);
+    if (this._lang() === 'es') return l.toLowerCase();
     if (this._lang() !== 'fr') return l;
     // "encre noire", "cartouche noire": the adjective agrees with the feminine noun.
     var w = hpT('fr', `cw_${ink.color}`);
@@ -1003,7 +1028,7 @@ class PrinterCard extends HTMLElement {
       var level = /-error$/.test(reason) ? 'error' : (/-report$/.test(reason) ? 'info' : 'warn');
       var base = reason.replace(/-(error|warning|report)$/, '');
       // Ink levels are already covered by the cartridges.
-      if (/^marker-supply-low|^toner-low|^marker-waste/.test(base) && r.inks.length) return;
+      if (/^(marker-supply-low|marker-supply-empty|toner-low|toner-empty|marker-waste)/.test(base) && r.inks.length) return;
       var key = `ipp_${base.replace(/-/g, '_')}`;
       var text = this._t(key);
       if (text === key) text = base.replace(/-/g, ' ').replace(/^./, (ch) => ch.toUpperCase());

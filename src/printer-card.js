@@ -739,23 +739,41 @@ function hpIppHosts(hass, e) {
   return out;
 }
 
+// Form of a host: 'v4' or 'v6' (in brackets) address, or 'name'.
+function hpHostForm(h) {
+  if (/^\[.*\]$/.test(h)) return 'v6';
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(h) ? 'v4' : 'name';
+}
+
+// Same host: identical, or the same name with and without its domain (hp1234 / hp1234.local).
+function hpSameHost(a, b) {
+  if (a === b) return true;
+  if (hpHostForm(a) !== 'name' || hpHostForm(b) !== 'name') return false;
+  return a.split('.')[0] === b.split('.')[0];
+}
+
 function hpFindIppSensor(hass, mainId) {
   var main = hass.devices?.[mainId];
   if (!main?.model || !hass.entities) return undefined;
   var sensors = hpSensorsByModel(hass).get(main.model) || [];
   var candidates = sensors.filter((e) => e.device_id !== mainId && hpIsIppStatus(hass.states[e.entity_id]));
   if (!candidates.length) return undefined;
-  // The host check only tells identical printers apart: with a single IPP sensor and a single
-  // HP Printer device of this model, the pair is unambiguous whatever host each side reports
-  // (the IP address on one side and the mDNS name on the other is common).
+  var mainHost = hpUrlHost(main.configuration_url);
+  // With a single IPP sensor and a single HP Printer device of this model, hosts written in different
+  // forms (the IP address on one side, the mDNS name on the other, which is common; IPv4 against IPv6) do not prevent
+  // the pairing; hosts of the same form that differ still do, since A may be followed by HP Printer
+  // only and B, of the same model, by IPP only.
   var printers = sensors.filter((e) => hpIsHpStatus(hass.states[e.entity_id]))
     .map((e) => e.device_id).filter((id, i, a) => a.indexOf(id) === i);
-  if (candidates.length === 1 && printers.length <= 1) return candidates[0].entity_id;
+  if (candidates.length === 1 && printers.length <= 1) {
+    if (!mainHost) return candidates[0].entity_id;
+    var comparable = hpIppHosts(hass, candidates[0]).filter((h) => hpHostForm(h) === hpHostForm(mainHost));
+    return !comparable.length || comparable.some((h) => hpSameHost(h, mainHost)) ? candidates[0].entity_id : undefined;
+  }
   // Otherwise, when both sides expose a host, one of them must match.
-  var mainHost = hpUrlHost(main.configuration_url);
   var hit = candidates.find((e) => {
     var hosts = hpIppHosts(hass, e);
-    return !mainHost || !hosts.length || hosts.indexOf(mainHost) >= 0;
+    return !mainHost || !hosts.length || hosts.some((h) => hpSameHost(h, mainHost));
   });
   return hit ? hit.entity_id : undefined;
 }

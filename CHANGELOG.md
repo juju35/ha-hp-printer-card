@@ -14,6 +14,8 @@
 - Test checking that the French strings have the English keys and placeholders.
 - CI: the screenshots workflow retries the Chromium download and fails clearly when apt fails three times.
 - `playwright` range raised to the locked 1.64.1.
+- CI: when the screenshots workflow pushes refreshed screenshots, it starts the lint, validate and HACS checks again on the pull request branch (a push made with `GITHUB_TOKEN` starts no `pull_request` run).
+- The compact card's Sections grid no longer pretends to change on zoom (Home Assistant does not read it again); `rows: 'auto'` already lets the full view grow.
 
 ## 2.4.0
 

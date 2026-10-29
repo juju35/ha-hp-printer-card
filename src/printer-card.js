@@ -1356,7 +1356,9 @@ class PrinterMiniCard extends PrinterCard {
 
   getCardSize() { return this._zoomed ? super.getCardSize() : 2; }
 
-  getGridOptions() { return this._zoomed ? super.getGridOptions() : { columns: 12, min_columns: 4, rows: 'auto' }; }
+  // Home Assistant reads the grid options when it lays out the Sections view, not when the card is
+  // zoomed: the mini card always asks for the compact grid, and rows: 'auto' lets the full view grow.
+  getGridOptions() { return { columns: 12, min_columns: 4, rows: 'auto' }; }
 
   _styles(color) {
     return super._styles(color).replace('</style>', `${HP_MINI_STYLES}</style>`);

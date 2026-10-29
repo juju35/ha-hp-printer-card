@@ -378,7 +378,8 @@ test("the detail button shows the full card, then the compact view again", () =>
   assert.match(full, /<button class="zoom" title="Back to the compact view"><ha-icon icon="mdi:arrow-collapse">/);
   assert.doesNotMatch(full, /class="mini"/);
   assert.equal(card.getCardSize(), 5);
-  assert.deepEqual({ ...card.getGridOptions() }, { columns: 12, min_columns: 6 });
+  // The grid stays the compact one: HA does not read it again on zoom, rows: 'auto' lets the card grow.
+  assert.deepEqual({ ...card.getGridOptions() }, { columns: 12, min_columns: 4, rows: "auto" });
   clickZoom(card);
   assert.match(card.shadowRoot.innerHTML, /<ha-card class="mini">/);
   assert.match(card.shadowRoot.innerHTML, /mdi:arrow-expand/);

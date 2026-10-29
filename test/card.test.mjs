@@ -121,6 +121,9 @@ test("the IPP sensor of another printer of the same model is not attached", () =
   assert.equal(hpFindIppSensor(hass, "p"), undefined);
   hass.devices.p = { ...hass.devices.p, configuration_url: "http://PRINTER.local/" };
   assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+  // The same name without its domain still matches.
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://printer/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
 });
 
 // IP address on one side, mDNS name on the other: a single printer of that model still gets its IPP sensor.
@@ -128,6 +131,45 @@ test("a single printer of the model keeps its IPP sensor when the hosts are writ
   const hass = withIpp(mockHass(), IPP_READY);
   hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
   assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+// One HP Printer device and one IPP sensor of the same model can still be two printers (A followed by
+// HP Printer only, B by IPP only): hosts of the same form that differ refuse the pairing.
+test("a single HP and a single IPP printer of the same model with different IP addresses are not paired", () => {
+  const hass = withIpp(mockHass(), st("idle", { uri_supported: "ipp://192.168.1.31/ipp/print" }));
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
+});
+
+test("a single HP and a single IPP printer of the same model with different host names are not paired", () => {
+  const hass = withIpp(mockHass(), IPP_READY);
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://other-printer.local/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
+  // The same name with or without its domain is the same printer.
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://PRINTER/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+test("a single pair is matched on the IPP host of the same form when both forms are advertised", () => {
+  const hass = withIpp(mockHass(), st("idle", { uri_supported: ["ipp://hp1234.local/ipp/print", "ipps://192.168.1.30/ipp/print"] }));
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.31/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
+});
+
+test("a single pair is still matched when one side gives an IPv4 address and the other an IPv6 one", () => {
+  const hass = withIpp(mockHass(), st("idle", { uri_supported: "ipp://[fe80::1]/ipp/print" }));
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+test("the HP status sensor of the other printer missing from the states does not pair it", () => {
+  const hass = withIpp(mockHass(), st("idle", { uri_supported: "ipp://192.168.1.31/ipp/print" }));
+  hass.devices.p2 = { name: "Office 2", manufacturer: "HP", model: "OfficeJet Pro 9010" };
+  hass.entities["sensor.p2_status"] = { entity_id: "sensor.p2_status", device_id: "p2" };
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
 });
 
 test("with identical printers, any advertised host of the IPP sensor can match", () => {

@@ -61,7 +61,12 @@ const CASES = [
   ["different DNS names", { hp: [{ id: "p", url: "http://printer-a.lan/" }], ipp: [ipp("ipp://printer-b.lan/ipp/print")] }, "p", undefined],
   ["DNS names with the same first label in different domains", { hp: [{ id: "p", url: "http://printer.office1.lan/" }], ipp: [ipp("ipp://printer.office2.lan/ipp/print")] }, "p", undefined],
   ["same name under the mDNS and a DNS domain, identical printers", { hp: [{ id: "p", url: "http://hp-a.lan/" }, { id: "p2", url: "http://hp-b.lan/" }], ipp: [{ id: "ipp_b", uris: "ipp://hp-b.local/ipp/print" }, { id: "ipp_a", uris: "ipp://hp-a.local/ipp/print" }] }, "p", "sensor.ipp_a"],
-  ["different names, one without domain", { hp: [{ id: "p", url: "http://printer-a/" }], ipp: [ipp("ipp://printer-b.local/ipp/print")] }, "p", undefined],
+  // A name without domain is a DNS name (search domain): it is compared with DNS names only, not with
+  // .local names (changed in 2.4.4: printer-a vs printer-b.local used to be a mismatch).
+  ["different names, one without domain, vs a .local name", { hp: [{ id: "p", url: "http://printer-a/" }], ipp: [ipp("ipp://printer-b.local/ipp/print")] }, "p", "sensor.ipp_a"],
+  ["name without domain vs .local name + IP", { hp: [{ id: "p", url: "http://officejet/" }], ipp: [ipp(["ipp://HPABC123.local.:631/ipp/print", "ipps://192.168.1.30/ipp/print"])] }, "p", "sensor.ipp_a"],
+  ["different names, one without domain, vs a DNS name", { hp: [{ id: "p", url: "http://printer-a/" }], ipp: [ipp("ipp://printer-b.lan/ipp/print")] }, "p", undefined],
+  ["different names without domain", { hp: [{ id: "p", url: "http://printer-a/" }], ipp: [ipp("ipp://printer-b/ipp/print")] }, "p", undefined],
   ["name + different IP announced", { hp: [{ id: "p", url: "http://192.168.1.30/" }], ipp: [ipp(["ipp://printer-b.local/ipp/print", "ipps://192.168.1.31/ipp/print"])] }, "p", undefined],
   ["other printer's HP status sensor missing from the states", { hp: [{ id: "p", url: "http://192.168.1.30/" }, { id: "p2", url: "http://192.168.1.31/", status: false }], ipp: [ipp("ipp://192.168.1.31/ipp/print")] }, "p", undefined],
   // Two printers of the same model followed by both integrations: the right IPP sensor for each.
@@ -73,6 +78,18 @@ const CASES = [
   ["two identical printers, a matching sensor wins over one without host", { hp: [{ id: "p", url: "http://192.168.1.30/" }, { id: "p2", url: "http://192.168.1.31/" }], ipp: [{ id: "ipp_b", uris: "" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", "sensor.ipp_a"],
   ["two identical printers, no host matches", { hp: [{ id: "p", url: "http://192.168.1.32/" }, { id: "p2", url: "http://192.168.1.31/" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", undefined],
   ["two identical printers, hosts of different forms only", { hp: [{ id: "p", url: "http://192.168.1.30/" }, { id: "p2", url: "http://192.168.1.31/" }], ipp: [ipp("ipp://hp-a.local/ipp/print")] }, "p", undefined],
+  // This HP device has no host: a sensor matching another HP device of the model is that device's.
+  ...[["p", "sensor.ipp_a"], ["p2", "sensor.ipp_b"]].map(([id, want]) => [
+    `two identical printers, no host on the HP side of p, ${id} gets its own sensor`,
+    { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.31/" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] },
+    id, want,
+  ]),
+  ["two identical printers, no host on the HP side of p, both sensors free", { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.32/" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", undefined],
+  ["two identical printers, no host on either HP side", { hp: [{ id: "p" }, { id: "p2" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", undefined],
+  ["no host on this HP side, the only IPP sensor is the other HP device's", { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.31/" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }] }, "p", undefined],
+  ["no host on this HP side, the other HP device's status sensor missing, its sensor still excluded", { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.31/", status: false }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", "sensor.ipp_a"],
+  ["no host on this HP side, the only IPP sensor matches the other HP device whose status sensor is missing", { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.31/", status: false }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }] }, "p", undefined],
+  ["no host on this HP side, the other HP device's host matches no sensor", { hp: [{ id: "p" }, { id: "p2", url: "http://192.168.1.32/" }], ipp: [{ id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", "sensor.ipp_a"],
   ["one HP device, two IPP sensors: the one with the same host", { hp: [{ id: "p", url: "http://192.168.1.30/" }], ipp: [{ id: "ipp_b", uris: "ipp://192.168.1.31/ipp/print" }, { id: "ipp_a", uris: "ipp://192.168.1.30/ipp/print" }] }, "p", "sensor.ipp_a"],
   // No known host.
   ["no host on either side", { hp: [{ id: "p" }], ipp: [ipp(undefined)] }, "p", "sensor.ipp_a"],

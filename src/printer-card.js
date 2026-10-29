@@ -751,13 +751,13 @@ function hpHostForm(h) {
 
 // Two hosts can tell two printers apart only when written in the same form. A mDNS name and a DNS
 // name are not comparable (HPABC123.local and officejet.lan can be the same printer); a name
-// without domain is comparable with both.
+// without domain is resolved through the DNS search domain, so it is compared with DNS names only
+// (officejet and HPABC123.local can be the same printer).
 function hpComparable(a, b) {
   var fa = hpHostForm(a);
   var fb = hpHostForm(b);
   if (fa === fb) return true;
-  var names = ['bare', 'mdns', 'dns'];
-  return (fa === 'bare' && names.indexOf(fb) >= 0) || (fb === 'bare' && names.indexOf(fa) >= 0);
+  return (fa === 'bare' && fb === 'dns') || (fa === 'dns' && fb === 'bare');
 }
 
 // Same host: identical, or the same name with and without its domain (hp1234 / hp1234.local), or
@@ -793,14 +793,24 @@ function hpFindIppSensor(hass, mainId) {
   // A matching host always wins, whatever the order of the candidates.
   var hit = verdicts.indexOf('match');
   if (hit >= 0) return candidates[hit].entity_id;
+  // This HP device has no host: a sensor whose host matches another device of the model (the other
+  // HP device of identical printers, even with its status sensor missing) belongs to that device.
+  // The single sensor left, if any, is this one's.
+  if (!mainHost) {
+    var own = candidates.map((e) => e.device_id);
+    var others = sensors.map((e) => e.device_id).filter((id, i, a) => id !== mainId && own.indexOf(id) < 0 && a.indexOf(id) === i)
+      .map((id) => hpUrlHost(hass.devices[id]?.configuration_url)).filter((h) => h);
+    var left = candidates.filter((_e, i) => !others.some((h) => hpHostVerdict(h, hosts[i]) === 'match'));
+    return left.length === 1 ? left[0].entity_id : undefined;
+  }
   var printers = sensors.filter((e) => hpIsHpStatus(hass.states[e.entity_id]))
     .map((e) => e.device_id).filter((id, i, a) => a.indexOf(id) === i);
   // A single IPP sensor and a single HP Printer device of this model: paired unless hosts of the same
   // form differ (A may be followed by HP Printer only and B, of the same model, by IPP only).
   if (candidates.length === 1 && printers.length <= 1) return verdicts[0] === 'unknown' ? candidates[0].entity_id : undefined;
-  // Identical printers: hosts of different forms cannot tell them apart; only a side without any host
-  // is accepted, as before.
-  var free = candidates.findIndex((_e, i) => !mainHost || !hosts[i].length);
+  // Identical printers: hosts of different forms cannot tell them apart; only a sensor without any
+  // host is accepted, as before.
+  var free = candidates.findIndex((_e, i) => !hosts[i].length);
   return free >= 0 ? candidates[free].entity_id : undefined;
 }
 

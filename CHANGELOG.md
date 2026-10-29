@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.4
+
+### Fixes
+- With two identical printers, when the HP Printer device of one has no address, its card no longer takes the other printer's IPP sensor (and shows its paper and cover alerts): the sensor whose address matches the other HP Printer device is left to it. When no sensor can be told apart, none is attached.
+- A printer name without domain in HP Printer (`officejet`) is now compared with DNS names only: the IPP sensor is attached when it announces the printer's `.local` name (and IP address), instead of being refused as another printer.
+
 ## 2.4.3
 
 ### Fixes

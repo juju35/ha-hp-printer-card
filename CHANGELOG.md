@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.2
+
+### Fixes
+- Two printers of the same model, one followed by HP Printer only and the other by IPP only, are no longer paired: the first printer's card no longer shows the second printer's paper and cover alerts. A single pair is still matched when one side gives the IP address and the other the `.local` name, and a name now matches with or without its domain (`hp1234` / `hp1234.local`).
+
 ## 2.4.1
 
 ### Fixes

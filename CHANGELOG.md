@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.4.1
+
+### Fixes
+- The IPP sensor is attached again when the HP Printer and IPP integrations name the printer differently (IP address on one side, `.local` name on the other): paper and cover alerts were lost. With identical printers, any address the IPP sensor advertises can match.
+- An empty cartridge reported by IPP no longer shows a second "Cartridge empty" alert next to the cartridge's own ink alert.
+- Common IPP reasons ("Load paper", "Toner empty", "Cartridge missing") are translated instead of shown in raw English.
+- Spanish: cartridge colors are written in lower case inside sentences ("Tinta baja: negro"), and "Vista por última vez" agrees with "impresora".
+- German: the tri-color cartridge is called "Farbe" ("Patrone Farbe: leer").
+- Lighter discovery on large installations: other devices are no longer scanned sensor by sensor, and only once per refresh.
+
+### Maintenance
+- Test checking that the French strings have the English keys and placeholders.
+- CI: the screenshots workflow retries the Chromium download and fails clearly when apt fails three times.
+- `playwright` range raised to the locked 1.64.1.
+- CI: when the screenshots workflow pushes refreshed screenshots, it starts the lint, validate and HACS checks again on the pull request branch (a push made with `GITHUB_TOKEN` starts no `pull_request` run).
+- The compact card's Sections grid no longer pretends to change on zoom (Home Assistant does not read it again); `rows: 'auto'` already lets the full view grow.
+
 ## 2.4.0
 
 ### Changes

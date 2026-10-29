@@ -113,10 +113,48 @@ for (const [label, first] of [["absent", undefined], ["unavailable", st("unavail
 // Two printers of the same model: the IPP sensor must belong to the right unit.
 test("the IPP sensor of another printer of the same model is not attached", () => {
   const hass = withIpp(mockHass(), IPP_READY);
+  // A second HP Printer device of the same model makes the pairing ambiguous: the hosts decide.
+  hass.devices.p2 = { name: "Office 2", manufacturer: "HP", model: "OfficeJet Pro 9010" };
+  hass.states["sensor.p2_status"] = st("ready", { options: STATUS_OPTIONS });
+  hass.entities["sensor.p2_status"] = { entity_id: "sensor.p2_status", device_id: "p2" };
   hass.devices.p = { ...hass.devices.p, configuration_url: "http://printer-2.local/" };
   assert.equal(hpFindIppSensor(hass, "p"), undefined);
   hass.devices.p = { ...hass.devices.p, configuration_url: "http://PRINTER.local/" };
   assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+// IP address on one side, mDNS name on the other: a single printer of that model still gets its IPP sensor.
+test("a single printer of the model keeps its IPP sensor when the hosts are written differently", () => {
+  const hass = withIpp(mockHass(), IPP_READY);
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+});
+
+test("with identical printers, any advertised host of the IPP sensor can match", () => {
+  const hass = withIpp(mockHass(), st("idle", { uri_supported: ["ipp://hp1234.local/ipp/print", "ipps://192.168.1.30/ipp/print"] }));
+  hass.devices.p2 = { name: "Office 2", manufacturer: "HP", model: "OfficeJet Pro 9010" };
+  hass.states["sensor.p2_status"] = st("ready", { options: STATUS_OPTIONS });
+  hass.entities["sensor.p2_status"] = { entity_id: "sensor.p2_status", device_id: "p2" };
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.30/" };
+  assert.equal(hpFindIppSensor(hass, "p"), "sensor.ipp_printer");
+  hass.devices.p = { ...hass.devices.p, configuration_url: "http://192.168.1.31/" };
+  assert.equal(hpFindIppSensor(hass, "p"), undefined);
+});
+
+test("an empty cartridge reported by IPP is not repeated when the cartridges are known", () => {
+  for (const reason of ["marker-supply-empty-error", "toner-empty-error"]) {
+    const html = render(withIpp(mockHass(), st("idle", { state_reason: reason }))).shadowRoot.innerHTML;
+    assert.doesNotMatch(html, /Cartridge empty|Toner empty/, reason);
+  }
+  // Without any cartridge sensor, the IPP reason is the only signal: it is kept, translated.
+  const bare = ippHass({ reason: "toner-empty-error" });
+  delete bare.entities["sensor.brother_black_toner"];
+  assert.match(render(bare, { device_id: "b" }).shadowRoot.innerHTML, /Toner empty/);
+});
+
+test("Spanish alerts write the cartridge color in lower case", () => {
+  const hass = { ...levels(mockHass(), { black: 10 }), language: "es" };
+  assert.match(render(hass).shadowRoot.innerHTML, /Tinta baja: negro/);
 });
 
 test("without any host to compare, the same-model IPP sensor is still attached", () => {
@@ -340,7 +378,8 @@ test("the detail button shows the full card, then the compact view again", () =>
   assert.match(full, /<button class="zoom" title="Back to the compact view"><ha-icon icon="mdi:arrow-collapse">/);
   assert.doesNotMatch(full, /class="mini"/);
   assert.equal(card.getCardSize(), 5);
-  assert.deepEqual({ ...card.getGridOptions() }, { columns: 12, min_columns: 6 });
+  // The grid stays the compact one: HA does not read it again on zoom, rows: 'auto' lets the card grow.
+  assert.deepEqual({ ...card.getGridOptions() }, { columns: 12, min_columns: 4, rows: "auto" });
   clickZoom(card);
   assert.match(card.shadowRoot.innerHTML, /<ha-card class="mini">/);
   assert.match(card.shadowRoot.innerHTML, /mdi:arrow-expand/);

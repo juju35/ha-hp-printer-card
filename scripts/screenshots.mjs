@@ -224,11 +224,15 @@ await render(
   { icons, hass }
 );
 
-await animate(
-  { file: "printing", type: "printer-card", theme: "light", width: 460, config: { device_id: "laser" }, hass: ipp },
-  { icons, hass }
-);
-await animate(
-  { file: "printing-mini", type: "printer-mini-card", theme: "light", width: 380, config: { device_id: "laser" }, hass: ipp },
-  { icons, hass }
-);
+// Every animation in both themes: each light GIF gets a `-dark` twin with the exact same setup.
+for (const theme of ["light", "dark"]) {
+  const suffix = theme === "dark" ? "-dark" : "";
+  await animate(
+    { file: `printing${suffix}`, type: "printer-card", theme, width: 460, config: { device_id: "laser" }, hass: ipp },
+    { icons, hass }
+  );
+  await animate(
+    { file: `printing-mini${suffix}`, type: "printer-mini-card", theme, width: 380, config: { device_id: "laser" }, hass: ipp },
+    { icons, hass }
+  );
+}

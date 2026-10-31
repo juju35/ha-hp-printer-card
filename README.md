@@ -192,10 +192,10 @@ Mini card:
 
 While a job is printing, the card animates: the preview screen glows as pages advance. It settles to a still card when idle. The mini card's preview glows the same way.
 
-![printer printing animation](screenshots/printing.gif)
-
-![printer mini card printing animation](screenshots/printing-mini.gif)
-The mini card glowing while a job prints.
+| | Light | Dark |
+|---|---|---|
+| Card while a job prints | ![printer printing animation](screenshots/printing.gif) | ![printer printing animation dark](screenshots/printing-dark.gif) |
+| Mini card glowing while a job prints | ![printer mini card printing animation](screenshots/printing-mini.gif) | ![printer mini card printing animation dark](screenshots/printing-mini-dark.gif) |
 
 ## How it works
 
@@ -211,7 +211,7 @@ Set `image` to use a photo of your own model (the lit control panel is only draw
 npm install
 npm run build        # stamps the version of package.json into dist/printer-card.js
 npm run check        # builds and checks the card (run in CI)
-npm run screenshots  # renders the cards with mock HP and IPP printers into screenshots/ (and printing.gif, printing-mini.gif, needs ffmpeg)
+npm run screenshots  # renders the cards with mock HP and IPP printers into screenshots/ (and the printing GIFs in light and dark, needs ffmpeg)
 ```
 
 `dist/` is not committed: `npm run build` creates it locally, CI builds it on every push, and the release workflow attaches the built file to the release, which is where HACS downloads it from.

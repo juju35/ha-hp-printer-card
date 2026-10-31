@@ -174,9 +174,13 @@ The control panel of each picture lights up in the status color.
 
 ## Screenshots
 
-| Light | Dark | Printer offline | IPP laser printer |
-|---|---|---|---|
-| ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) | ![offline](screenshots/offline.png) | ![ipp](screenshots/ipp.png) |
+Card:
+
+| | Light | Dark |
+|---|---|---|
+| Inkjet | ![card](screenshots/card.png) | ![card dark](screenshots/card-dark.png) |
+| Printer offline | ![offline](screenshots/offline.png) | ![offline dark](screenshots/offline-dark.png) |
+| IPP laser printer | ![ipp](screenshots/ipp.png) | ![ipp dark](screenshots/ipp-dark.png) |
 
 Mini card:
 
